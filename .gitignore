@@ -1,0 +1,59 @@
+# 中文：忽略本地依赖、构建输出、缓存和私有环境文件。
+# English: Ignores local dependencies, build output, caches, and private environment files.
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+frontend/.vite/
+
+# Airfoil source and generated data policy
+coord_seligFmt/
+results_geometry/
+results_xfoil/
+
+# Generated reports
+clean_report.json
+database_clean_report.json
+
+# Test and build artifacts
+coverage/
+frontend/coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.coverage
+htmlcov/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local script output
+testxfoilpython_output/

@@ -1,0 +1,6 @@
+# 中文：列出后端运行所需的 Python 依赖。
+# English: Lists Python dependencies required by the backend runtime.
+
+fastapi
+uvicorn
+psycopg[binary]

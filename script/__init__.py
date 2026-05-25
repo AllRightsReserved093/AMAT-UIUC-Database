@@ -1,0 +1,2 @@
+"""Batch scripts for AMATUIUCDatabase."""
+

@@ -1,0 +1,4 @@
+# 中文：统一从后端依赖文件安装 Python 运行依赖。
+# English: Installs Python runtime dependencies from the backend requirements file.
+
+-r backend/requirements.txt

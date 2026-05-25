@@ -1,0 +1,18 @@
+# 中文：定义 AMATUIUCDatabase 本地开发用 PostgreSQL 服务。
+# English: Defines the local PostgreSQL service for AMATUIUCDatabase development.
+
+services:
+  db:
+    image: postgres:18
+    container_name: airfoil-postgres
+    environment:
+      POSTGRES_DB: airfoil_db
+      POSTGRES_USER: airfoil_user
+      POSTGRES_PASSWORD: airfoil_password
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - airfoil_pgdata:/var/lib/postgresql
+
+volumes:
+  airfoil_pgdata:
