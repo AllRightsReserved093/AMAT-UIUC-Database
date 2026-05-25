@@ -23,6 +23,8 @@ def _dir_has_required_dlls(path: Path) -> bool:
     return path.is_dir() and all((path / dll_name).exists() for dll_name in REQUIRED_DLLS)
 
 
+# 中文：在 Windows 下通过环境变量和 PATH 配置 XFoil DLL 搜索路径。
+# English: Configures the XFoil DLL search path on Windows through environment variables and PATH.
 def configure_windows_dll_search_path() -> str | None:
     """在 Windows 下配置 DLL 搜索路径，返回命中的目录；若未命中则返回 None。"""
     if os.name != "nt":
@@ -30,15 +32,12 @@ def configure_windows_dll_search_path() -> str | None:
 
     candidates: list[Path] = []
 
-    # Common local toolchains.
-    candidates.extend(
-        [
-            Path(r"D:\Qt\Tools\mingw1310_64\bin"),
-            Path(r"C:\Program Files\Git\mingw64\bin"),
-            Path(r"C:\msys64\mingw64\bin"),
-            Path(r"C:\msys64\ucrt64\bin"),
-        ]
-    )
+    # User-provided DLL directories. Separate multiple entries with the OS path separator.
+    configured_dirs = os.environ.get("XFOIL_DLL_DIRS", "")
+    for entry in configured_dirs.split(os.pathsep):
+        entry = entry.strip().strip('"')
+        if entry:
+            candidates.append(Path(entry))
 
     # Existing PATH entries.
     for entry in os.environ.get("PATH", "").split(os.pathsep):

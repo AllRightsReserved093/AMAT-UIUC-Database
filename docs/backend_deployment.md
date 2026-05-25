@@ -4,11 +4,7 @@ English: Documents the AMATUIUCDatabase backend local deployment workflow and co
 # Backend Deployment
 
 This document describes the current local backend deployment flow on Windows PowerShell.
-Run all commands from the project root:
-
-```powershell
-cd D:\GitHub\AMATUIUCDatabase
-```
+Open PowerShell in the repository root before running the commands below.
 
 ## 1. Prepare Python Runtime
 
