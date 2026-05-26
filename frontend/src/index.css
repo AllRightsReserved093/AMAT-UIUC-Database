@@ -401,10 +401,15 @@ button:hover {
   border-radius: 4px;
 }
 
-.airfoil-thumb svg {
+.airfoil-thumb svg,
+.airfoil-preview-image {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.airfoil-preview-image {
+  object-fit: cover;
 }
 
 .airfoil-grid-line {
