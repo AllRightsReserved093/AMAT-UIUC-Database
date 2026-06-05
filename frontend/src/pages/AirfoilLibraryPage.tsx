@@ -96,11 +96,11 @@ type CatalogImportState = {
 
 // --------- Catalog Import ---------
 
-// 中文：从真实后端 catalog 导入一条翼型记录，先用于验证页面的数据链路。
-// English: Imports one real airfoil record from the backend catalog to validate the page data path first.
-async function importOneRealCatalogRecord(signal?: AbortSignal): Promise<AirfoilCatalogRecord[]> {
+// 中文：从真实后端 catalog 导入全量轻量翼型记录。
+// English: Imports the full lightweight airfoil catalog from the backend.
+async function importFullCatalogRecords(signal?: AbortSignal): Promise<AirfoilCatalogRecord[]> {
   const response = await backendApi.getFullCatalogs(DEFAULT_CATALOG_REYNOLDS_NUMBER, signal)
-  return response.file_catalogs.slice(0, 1)
+  return response.file_catalogs
 }
 
 // --------- Card Model Builders ---------
@@ -225,7 +225,7 @@ function AirfoilLibraryPage() {
   useEffect(() => {
     const controller = new AbortController()
 
-    importOneRealCatalogRecord(controller.signal)
+    importFullCatalogRecords(controller.signal)
       .then((records) => {
         setCatalogImportState({
           records,
