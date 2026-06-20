@@ -7,11 +7,24 @@ import heroPreviewImage from '../../assets/hero.png'
 
 type AirfoilPreviewProps = {
   label?: string
+  path?: string
 }
 
-// 中文：渲染翼型预览占位图，后续可替换为真实几何缩略图或懒加载预览图。
-// English: Renders the placeholder airfoil preview image, to be replaced later by real geometry thumbnails or lazy-loaded previews.
-function AirfoilPreview({ label = 'Airfoil preview placeholder' }: AirfoilPreviewProps) {
+// 中文：优先渲染真实翼型 SVG path；没有 path 时回退到占位图。
+// English: Renders the real airfoil SVG path first, falling back to the placeholder image when no path exists.
+function AirfoilPreview({ label = 'Airfoil preview placeholder', path }: AirfoilPreviewProps) {
+  if (path) {
+    return (
+      <svg
+        aria-label={label}
+        role="img"
+        viewBox="0 0 240 80"
+      >
+        <path className="airfoil-shape" d={path} vectorEffect="non-scaling-stroke" />
+      </svg>
+    )
+  }
+
   return (
     <img
       alt={label}

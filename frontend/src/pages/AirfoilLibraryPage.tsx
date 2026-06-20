@@ -1,6 +1,6 @@
 /*
-文件功能：显示翼型库列表页面，目前使用后端 catalog 结构的占位数据和占位预览图。
-File purpose: Displays the airfoil library page with placeholder data that matches the backend catalog structure and placeholder preview images.
+文件功能：显示翼型库列表页面，加载后端 catalog 并为列表卡片接入几何 SVG 预览。
+File purpose: Displays the airfoil library page, loads the backend catalog, and wires geometry SVG previews into list cards.
 
 结构说明：本文件按“数据记录 -> 卡片模型 -> 视图组件 -> 页面入口”的顺序组织，减少 JSX 与数据处理逻辑混杂。
 Structure note: This file is organized as data records -> card models -> view components -> page entry to keep JSX separate from data preparation.
@@ -9,6 +9,14 @@ Structure note: This file is organized as data records -> card models -> view co
 import { useEffect, useState } from 'react'
 import AirfoilPreview from '../features/airfoil-library/AirfoilPreview'
 import { backendApi, type FileCatalogListResponse } from '../api/backend'
+import {
+  buildSvgPath,
+  loadAllGeometries,
+  mapPointsToSvg,
+  processGeometries,
+  type ProcessedGeometry,
+  type ProcessedGeometryMap,
+} from '../features/geometry/geometry'
 
 // --------- Catalog Records ---------
 
@@ -70,6 +78,7 @@ type AirfoilCardViewModel = {
   title: string
   path: string
   previewLabel: string
+  previewPath?: string
   tags: string[]
 }
 
@@ -94,6 +103,14 @@ type CatalogImportState = {
   errorMessage: string | null
 }
 
+type AirfoilPreviewPathMap = Record<string, string>
+
+type GeometryPreviewState = {
+  paths: AirfoilPreviewPathMap
+  isLoading: boolean
+  errorMessage: string | null
+}
+
 // --------- Catalog Import ---------
 
 // 中文：从真实后端 catalog 导入全量轻量翼型记录。
@@ -103,18 +120,54 @@ async function importFullCatalogRecords(signal?: AbortSignal): Promise<AirfoilCa
   return response.file_catalogs
 }
 
+// 中文：读取并处理几何文件，生成列表缩略图使用的 SVG path。
+// English: Loads and processes geometry files, then builds SVG paths for list previews.
+async function importAirfoilPreviewPaths(signal?: AbortSignal): Promise<AirfoilPreviewPathMap> {
+  const rawGeometries = await loadAllGeometries(signal)
+  const geometries = processGeometries(rawGeometries)
+  return createAirfoilPreviewPathMap(geometries)
+}
+
 // --------- Card Model Builders ---------
 
 // 中文：把单条 catalog 记录转换为卡片显示模型。
 // English: Converts one catalog record into a card display model.
-function createAirfoilCardViewModel(record: AirfoilCatalogRecord): AirfoilCardViewModel {
+function createAirfoilCardViewModel(
+  record: AirfoilCatalogRecord,
+  previewPaths: AirfoilPreviewPathMap,
+): AirfoilCardViewModel {
   return {
     id: record.file_name,
     title: record.file_name,
     path: record.file_path,
     previewLabel: `${record.file_name} preview`,
+    previewPath: previewPaths[record.file_name],
     tags: createAirfoilCatalogTags(record),
   }
+}
+
+// 中文：把处理后的几何数据转换成按文件名索引的列表预览 SVG path。
+// English: Converts processed geometry into list-preview SVG paths keyed by file name.
+function createAirfoilPreviewPathMap(geometries: ProcessedGeometryMap): AirfoilPreviewPathMap {
+  const paths: AirfoilPreviewPathMap = {}
+
+  for (const [fileName, geometry] of Object.entries(geometries)) {
+    const previewPath = createAirfoilPreviewPath(geometry)
+    if (previewPath) paths[fileName] = previewPath
+  }
+
+  return paths
+}
+
+// 中文：为单个翼型生成固定 viewBox 的列表缩略图 SVG path。
+// English: Builds a fixed-viewBox list-preview SVG path for one airfoil.
+function createAirfoilPreviewPath(geometry: ProcessedGeometry): string | undefined {
+  if (!geometry.isRenderable || !geometry.bounds) return undefined
+
+  const svgPoints = mapPointsToSvg(geometry.points, geometry.bounds)
+  const svgPath = buildSvgPath(svgPoints)
+
+  return svgPath.length > 0 ? svgPath : undefined
 }
 
 // 中文：把轻量 catalog 字段转换为卡片底部标签。
@@ -194,7 +247,7 @@ function AirfoilCard({ card }: AirfoilCardProps) {
   return (
     <article className="airfoil-card">
       <div className="airfoil-thumb">
-        <AirfoilPreview label={card.previewLabel} />
+        <AirfoilPreview label={card.previewLabel} path={card.previewPath} />
       </div>
 
       <div className="airfoil-meta">
@@ -218,6 +271,11 @@ function AirfoilCard({ card }: AirfoilCardProps) {
 function AirfoilLibraryPage() {
   const [catalogImportState, setCatalogImportState] = useState<CatalogImportState>({
     records: placeholderCatalogRecords,
+    isLoading: true,
+    errorMessage: null,
+  })
+  const [geometryPreviewState, setGeometryPreviewState] = useState<GeometryPreviewState>({
+    paths: {},
     isLoading: true,
     errorMessage: null,
   })
@@ -248,7 +306,35 @@ function AirfoilLibraryPage() {
     }
   }, [])
 
-  const cards = catalogImportState.records.map(createAirfoilCardViewModel)
+  useEffect(() => {
+    const controller = new AbortController()
+
+    importAirfoilPreviewPaths(controller.signal)
+      .then((paths) => {
+        setGeometryPreviewState({
+          paths,
+          isLoading: false,
+          errorMessage: null,
+        })
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return
+
+        setGeometryPreviewState({
+          paths: {},
+          isLoading: false,
+          errorMessage: error instanceof Error ? error.message : 'Failed to load geometry previews.',
+        })
+      })
+
+    return () => {
+      controller.abort()
+    }
+  }, [])
+
+  const cards = catalogImportState.records.map((record) =>
+    createAirfoilCardViewModel(record, geometryPreviewState.paths),
+  )
 
   return (
     <section className="panel airfoil-list-panel">
