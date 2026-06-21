@@ -97,6 +97,7 @@ Owns frontend-side geometry loading and the first rendering-preparation step:
 - `calculateBounds(points)` calculates the point-array bounds for later scaling and coordinate mapping;
 - `mapPointsToSvg(points, bounds, options)` maps filtered airfoil points into SVG/viewBox coordinates;
 - `buildSvgPath(points, closePath)` converts mapped SVG points into a `<path>` `d` string;
+- `buildAirfoilSvgPath(geometry, options)` is the rendering entry for converting processed geometry into an SVG path;
 - `filterRenderablePoints(points)` removes non-renderable points and marks whether the point set can be rendered safely;
 - `processGeometries(rawFiles)` wraps raw text and parsed points by file name.
 

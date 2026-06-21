@@ -35,6 +35,10 @@ export type SvgMapOptions = {
   scaleMode?: SvgScaleMode
 }
 
+export type SvgPathOptions = SvgMapOptions & {
+  closePath?: boolean
+}
+
 export type GeometryFilterResult = {
   points: AirfoilPoint[]
   bounds: GeometryBounds | null
@@ -199,6 +203,17 @@ export function buildSvgPath(points: SvgPoint[], closePath = false): string {
   if (closePath) commands.push('Z')
 
   return commands.join(' ')
+}
+
+// 中文：渲染入口函数；把处理后的翼型几何数据转换成 SVG path 字符串。
+// English: Rendering entry function; converts processed airfoil geometry into an SVG path string.
+export function buildAirfoilSvgPath(geometry: ProcessedGeometry, options: SvgPathOptions = {}): string | undefined {
+  if (!geometry.isRenderable || !geometry.bounds) return undefined
+
+  const svgPoints = mapPointsToSvg(geometry.points, geometry.bounds, options)
+  const svgPath = buildSvgPath(svgPoints, options.closePath ?? false)
+
+  return svgPath.length > 0 ? svgPath : undefined
 }
 
 // 中文：过滤无法安全渲染的点，并判断这组点是否足够用于渲染。
