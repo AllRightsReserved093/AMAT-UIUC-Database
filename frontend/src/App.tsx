@@ -21,12 +21,19 @@ const MIN_LIST_WIDTH = 320
 const MIN_SIDE_WIDTH = 280
 const MIN_PANEL_HEIGHT = 180
 
+type WorkspaceSizeVariable = '--list-width' | '--side-width' | '--node-height'
+
 function clampPanelSize(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
 }
 
 function App() {
   const workspaceRef = useRef<HTMLDivElement>(null)
+  const pendingWorkspaceSizeFrameRef = useRef<number | null>(null)
+  const pendingWorkspaceSizeUpdateRef = useRef<{
+    name: WorkspaceSizeVariable
+    value: number
+  } | null>(null)
   const [viewportText, setViewportText] = useState<string>()
   const [listWidth, setListWidth] = useState(360)
   const [sideWidth, setSideWidth] = useState(420)
@@ -53,6 +60,47 @@ function App() {
     initializeApp()
   }, [])
 
+  useEffect(() => {
+    return () => {
+      if (pendingWorkspaceSizeFrameRef.current === null) return
+      window.cancelAnimationFrame(pendingWorkspaceSizeFrameRef.current)
+    }
+  }, [])
+
+  // 中文：拖动过程中只写 workspace CSS 变量，不触发 React 重新渲染。
+  // English: During dragging, only writes workspace CSS variables without triggering React renders.
+  function scheduleWorkspaceSizeVariable(name: WorkspaceSizeVariable, value: number) {
+    pendingWorkspaceSizeUpdateRef.current = { name, value }
+
+    if (pendingWorkspaceSizeFrameRef.current !== null) return
+
+    pendingWorkspaceSizeFrameRef.current = window.requestAnimationFrame(() => {
+      const update = pendingWorkspaceSizeUpdateRef.current
+
+      pendingWorkspaceSizeFrameRef.current = null
+      pendingWorkspaceSizeUpdateRef.current = null
+
+      if (!update) return
+      setWorkspaceSizeVariable(update.name, update.value)
+    })
+  }
+
+  // 中文：拖动结束时立即同步最后的视觉尺寸，并交给 React state 保存。
+  // English: When dragging ends, immediately syncs the final visual size before saving it in React state.
+  function flushWorkspaceSizeVariable(name: WorkspaceSizeVariable, value: number) {
+    if (pendingWorkspaceSizeFrameRef.current !== null) {
+      window.cancelAnimationFrame(pendingWorkspaceSizeFrameRef.current)
+      pendingWorkspaceSizeFrameRef.current = null
+      pendingWorkspaceSizeUpdateRef.current = null
+    }
+
+    setWorkspaceSizeVariable(name, value)
+  }
+
+  function setWorkspaceSizeVariable(name: WorkspaceSizeVariable, value: number) {
+    workspaceRef.current?.style.setProperty(name, `${value}px`)
+  }
+
   function beginListResize(event: ReactPointerEvent) {
     event.preventDefault()
     const workspace = workspaceRef.current
@@ -65,19 +113,28 @@ function App() {
       MIN_LIST_WIDTH,
       workspaceBounds.width - MIN_PREVIEW_WIDTH - MIN_SIDE_WIDTH - 12,
     )
+    let nextListWidth = listWidth
 
     function handlePointerMove(moveEvent: PointerEvent) {
-      const nextWidth = listBounds.right - moveEvent.clientX
-      setListWidth(clampPanelSize(nextWidth, MIN_LIST_WIDTH, maxListWidth))
+      nextListWidth = clampPanelSize(
+        listBounds.right - moveEvent.clientX,
+        MIN_LIST_WIDTH,
+        maxListWidth,
+      )
+      scheduleWorkspaceSizeVariable('--list-width', nextListWidth)
     }
 
-    function handlePointerUp() {
+    function handlePointerEnd() {
+      flushWorkspaceSizeVariable('--list-width', nextListWidth)
+      setListWidth(nextListWidth)
       window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointerup', handlePointerEnd)
+      window.removeEventListener('pointercancel', handlePointerEnd)
     }
 
     window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', handlePointerUp)
+    window.addEventListener('pointerup', handlePointerEnd)
+    window.addEventListener('pointercancel', handlePointerEnd)
   }
 
   function beginSideResize(event: ReactPointerEvent) {
@@ -90,19 +147,28 @@ function App() {
       MIN_SIDE_WIDTH,
       bounds.width - MIN_PREVIEW_WIDTH - MIN_LIST_WIDTH - 12,
     )
+    let nextSideWidth = sideWidth
 
     function handlePointerMove(moveEvent: PointerEvent) {
-      const nextWidth = bounds.right - moveEvent.clientX
-      setSideWidth(clampPanelSize(nextWidth, MIN_SIDE_WIDTH, maxSideWidth))
+      nextSideWidth = clampPanelSize(
+        bounds.right - moveEvent.clientX,
+        MIN_SIDE_WIDTH,
+        maxSideWidth,
+      )
+      scheduleWorkspaceSizeVariable('--side-width', nextSideWidth)
     }
 
-    function handlePointerUp() {
+    function handlePointerEnd() {
+      flushWorkspaceSizeVariable('--side-width', nextSideWidth)
+      setSideWidth(nextSideWidth)
       window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointerup', handlePointerEnd)
+      window.removeEventListener('pointercancel', handlePointerEnd)
     }
 
     window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', handlePointerUp)
+    window.addEventListener('pointerup', handlePointerEnd)
+    window.addEventListener('pointercancel', handlePointerEnd)
   }
 
   function beginNodeResize(event: ReactPointerEvent) {
@@ -112,19 +178,28 @@ function App() {
 
     const bounds = sideStack.getBoundingClientRect()
     const maxNodeHeight = Math.max(MIN_PANEL_HEIGHT, bounds.height - MIN_PANEL_HEIGHT)
+    let nextNodeHeight = nodeHeight
 
     function handlePointerMove(moveEvent: PointerEvent) {
-      const nextHeight = bounds.bottom - moveEvent.clientY
-      setNodeHeight(clampPanelSize(nextHeight, MIN_PANEL_HEIGHT, maxNodeHeight))
+      nextNodeHeight = clampPanelSize(
+        bounds.bottom - moveEvent.clientY,
+        MIN_PANEL_HEIGHT,
+        maxNodeHeight,
+      )
+      scheduleWorkspaceSizeVariable('--node-height', nextNodeHeight)
     }
 
-    function handlePointerUp() {
+    function handlePointerEnd() {
+      flushWorkspaceSizeVariable('--node-height', nextNodeHeight)
+      setNodeHeight(nextNodeHeight)
       window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointerup', handlePointerEnd)
+      window.removeEventListener('pointercancel', handlePointerEnd)
     }
 
     window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', handlePointerUp)
+    window.addEventListener('pointerup', handlePointerEnd)
+    window.addEventListener('pointercancel', handlePointerEnd)
   }
 
   function selectAirfoil(fileName: string) {
