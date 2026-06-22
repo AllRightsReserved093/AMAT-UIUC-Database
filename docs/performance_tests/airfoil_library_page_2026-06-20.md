@@ -1,11 +1,13 @@
-<!-- 中文：记录 AirfoilLibraryPage 当前全量 geometry 预览链路的性能采样结果。
-English: Records performance samples for the current full-geometry preview pipeline in AirfoilLibraryPage. -->
+<!-- 中文：记录 2026-06-20 当时 AirfoilLibraryPage 全量 geometry 预览链路的历史性能采样结果。
+English: Records historical 2026-06-20 performance samples for the then-current full-geometry preview pipeline in AirfoilLibraryPage. -->
 
 # Airfoil Library Page Performance Test - 2026-06-20
 
 ## Scope
 
-This test measures the current data and preview-generation pipeline used by `AirfoilLibraryPage.tsx`.
+This test measured the data and preview-generation pipeline used by `AirfoilLibraryPage.tsx` on 2026-06-20.
+
+Current note: geometry loading and SVG path ownership later moved to `App.tsx`, so this file is a historical benchmark for the earlier page-owned pipeline.
 
 Measured pipeline per run:
 

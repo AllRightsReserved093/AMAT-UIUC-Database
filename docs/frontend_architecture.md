@@ -1,9 +1,9 @@
-<!-- 中文：说明 AMATUIUCDatabase 当前前端架构、页面结构和数据访问方式。
-English: Documents the current AMATUIUCDatabase frontend architecture, page structure, and data access approach. -->
+<!-- 中文：说明 AMATUIUCDatabase 当前前端架构、状态归属、页面结构和几何渲染数据流。
+English: Documents the current AMATUIUCDatabase frontend architecture, state ownership, page structure, and geometry-rendering data flow. -->
 
 # Frontend Architecture
 
-The frontend is a Vite/React TypeScript prototype for an airfoil database workspace. It currently emphasizes a desktop-style layout, centralized backend access, and a first-pass React Flow node editor.
+The frontend is a Vite/React TypeScript prototype for an airfoil database workspace. It currently emphasizes a desktop-style layout, centralized backend access, SVG airfoil previews, selected-airfoil viewport rendering, and a first-pass React Flow node editor.
 
 ## Runtime Stack
 
@@ -22,18 +22,20 @@ Mounts the React app.
 
 `frontend/src/App.tsx`
 
-Defines the desktop-style workspace shell:
+Defines the desktop-style workspace shell and owns cross-panel state:
 
 - title bar;
 - viewport panel;
 - airfoil library panel;
 - properties panel;
 - node editor panel;
-- resizable panel handles.
+- resizable panel handles;
+- selected airfoil file name;
+- full geometry SVG path map shared by the list and viewport.
 
 `frontend/src/index.css`
 
-Defines the workspace layout, panel styling, airfoil list styling, node editor styling, and shared node visuals.
+Defines the workspace layout, panel styling, airfoil list styling, viewport SVG styling, node editor styling, and shared node visuals.
 
 ## Backend Access
 
@@ -67,15 +69,58 @@ http://127.0.0.1:8000
 
 It can be overridden with `VITE_BACKEND_URL`.
 
+## Top-Level State Ownership
+
+Shared UI state lives in `App.tsx` when more than one panel needs it.
+
+```text
+App.tsx
+  selectedAirfoilFileName
+  geometryPreviewState
+    paths: Record<fileName, svgPath>
+    isLoading
+    errorMessage
+
+  -> ViewportPage
+       selectedAirfoilFileName
+       selectedAirfoilPath
+       geometry loading/error state
+
+  -> AirfoilLibraryPage
+       selectedAirfoilFileName
+       onSelectAirfoil(fileName)
+       previewPaths
+```
+
+`AirfoilLibraryPage` does not own geometry loading. It owns only the lightweight catalog import and list-card model creation. Geometry SVG paths are loaded once by `App.tsx` and passed to both the list preview and the viewport.
+
 ## Page-Level Modules
 
 `frontend/src/pages/ViewportPage.tsx`
 
-Currently displays the main preview area and placeholder visualization content. The intended role is detailed geometry preview and future analysis-result rendering.
+Displays the main viewport panel. It receives the selected airfoil file name, selected SVG path, and geometry loading/error state from `App.tsx`.
+
+Current behavior:
+
+- no selected airfoil: shows the default visualization placeholder;
+- selected airfoil while geometry is loading: shows a loading message;
+- selected airfoil with SVG path: renders the airfoil as an SVG path;
+- selected airfoil without a path: shows a geometry-unavailable message;
+- geometry load failure: shows the geometry error message.
 
 `frontend/src/pages/AirfoilLibraryPage.tsx`
 
-Loads the real lightweight catalog through `getFullCatalogs()` and keeps placeholder catalog records as an initial fallback. Its intended role is to render catalog text and pass geometry rendering work to feature-level geometry modules.
+Loads the real lightweight catalog through `getFullCatalogs()` and keeps placeholder catalog records only as initial loading-state data.
+
+Current responsibilities:
+
+- import lightweight catalog records;
+- create card view models from catalog records and the `previewPaths` prop;
+- render list cards and metadata tags;
+- handle click and keyboard selection;
+- highlight the currently selected airfoil.
+
+It deliberately does not load geometry files. Geometry path data is owned by `App.tsx` and passed in as `previewPaths`.
 
 `frontend/src/pages/PropertiesPage.tsx`
 
@@ -89,24 +134,82 @@ Owns the React Flow editor state, context menu, edge connections, and the first 
 
 `frontend/src/features/geometry/geometry.ts`
 
-Owns frontend-side geometry loading and the first rendering-preparation step:
+Owns frontend-side geometry loading and rendering preparation:
 
 - `loadAllGeometries()` loads cleaned `.dat` text through the backend API;
 - `AirfoilPoint` defines one parsed coordinate point as `{ x: number, y: number }`;
 - `parseAirfoilPoints(rawText)` converts raw `.dat` text into an ordered point array;
 - `calculateBounds(points)` calculates the point-array bounds for later scaling and coordinate mapping;
+- `filterRenderablePoints(points)` removes non-renderable points and marks whether the point set can be rendered safely;
+- `processGeometries(rawFiles)` wraps raw text, filtered points, bounds, warnings, and renderability by file name;
 - `mapPointsToSvg(points, bounds, options)` maps filtered airfoil points into SVG/viewBox coordinates;
 - `buildSvgPath(points, closePath)` converts mapped SVG points into a `<path>` `d` string;
-- `buildAirfoilSvgPath(geometry, options)` is the rendering entry for converting processed geometry into an SVG path;
-- `filterRenderablePoints(points)` removes non-renderable points and marks whether the point set can be rendered safely;
-- `processGeometries(rawFiles)` wraps raw text and parsed points by file name.
+- `buildAirfoilSvgPath(geometry, options)` is the rendering entry for converting processed geometry into an SVG path.
 
 The parser keeps the source point order, skips title or incomplete lines, and accepts whitespace or comma separators.
 The filter removes non-finite coordinates and marks geometries with fewer than two points or zero x-span as not renderable. Processed geometry now carries bounds when at least one renderable point exists. SVG mapping defaults to a `240 x 80` viewBox, `8` padding, and chord-based scaling, while allowing callers to pass viewport-specific dimensions. Path generation keeps line segments, limits numeric output to three decimals, and leaves path closing optional.
 
 `frontend/src/features/airfoil-library/AirfoilPreview.tsx`
 
-Renders a real SVG path preview when the airfoil library page provides one, and falls back to the placeholder image when geometry is unavailable or not renderable.
+Renders a real SVG path preview when the caller provides one, and falls back to `frontend/src/assets/hero.png` when geometry is unavailable or not renderable.
+
+The component is memoized so selected-card changes do not force unchanged preview SVGs to re-render.
+
+## Geometry Data Flow
+
+The current geometry path flow is:
+
+```text
+App.tsx
+  importAirfoilPreviewPaths()
+      |
+      v
+frontend/src/features/geometry/geometry.ts
+  loadAllGeometries()
+    -> backendApi.getFullCatalogs(1_000_000)
+    -> backendApi.getGeometryFiles(fileNames)
+    -> fallback to single-file reads only when the batch request fails with file-level errors
+      |
+      v
+  processGeometries(rawFiles)
+    -> parseAirfoilPoints(rawText)
+    -> filterRenderablePoints(points)
+    -> calculateBounds(points)
+      |
+      v
+  buildAirfoilSvgPath(geometry)
+    -> mapPointsToSvg(points, bounds, options)
+    -> buildSvgPath(svgPoints)
+      |
+      v
+App geometryPreviewState.paths
+  -> AirfoilLibraryPage card previews
+  -> ViewportPage selected-airfoil SVG
+```
+
+The current shared path map uses the default SVG viewBox contract:
+
+```text
+viewBox: 0 0 240 80
+padding: 8
+scale mode: chord
+```
+
+This is sufficient for list previews and the first viewport display. Future viewport interaction can pass viewport-specific options to `buildAirfoilSvgPath()` or keep processed geometry in `App` when pan/zoom, axes, measurement tools, or hit testing need original points.
+
+## Selection and Render Performance
+
+Selection state is stored in `App.tsx` as `selectedAirfoilFileName`.
+
+Current optimization boundary:
+
+- `selectAirfoil` is wrapped in `useCallback`;
+- selecting the already-selected file returns the existing state;
+- `AirfoilLibraryPage` memoizes card view models with `useMemo`;
+- `AirfoilCard` is memoized;
+- `AirfoilPreview` is memoized.
+
+This means a selection change should mainly affect the old selected card, the new selected card, and the viewport path. The full list still exists in the DOM, so resizing and initial list rendering can still be expensive until list virtualization is implemented.
 
 ## Node System
 
@@ -141,24 +244,29 @@ The intended data strategy is:
 
 ```text
 Catalog:
-  Load all lightweight records once.
+  AirfoilLibraryPage loads all lightweight records once for list text and metadata tags.
 
 Geometry files:
-  Load cleaned .dat text, then convert it into point arrays before preview or viewport rendering.
+  App loads all cleaned .dat text once, processes it into SVG paths, and shares those paths with list previews and the viewport.
+
+Selection:
+  App owns selectedAirfoilFileName and passes it to both the list and viewport.
 
 Metadata:
-  Load full structured metadata only when a detail view or node workflow needs it.
+  Full structured metadata should be loaded only when a detail view or node workflow needs it.
 
 Preview:
-  Keep rendering logic separate from list data loading.
+  Geometry parsing and SVG path generation stay in geometry.ts.
+  List preview rendering stays in AirfoilPreview.tsx.
+  Main viewport rendering stays in ViewportPage.tsx.
 ```
 
 ## Known Gaps
 
-- `AirfoilLibraryPage` still keeps placeholder data as an initial fallback;
-- viewport geometry rendering is not wired to the parsed geometry point arrays;
-- generated SVG paths are wired into list previews but not into the viewport UI yet;
-- no virtualized catalog list is implemented yet;
-- no preview cache is implemented yet;
+- The airfoil catalog list is not virtualized yet, so the full card list and SVG previews are still present in the DOM.
+- Viewport rendering currently uses the same default `240 x 80` path contract as the list preview; there is no viewport-specific fit/pan/zoom model yet.
+- `App.tsx` currently owns both shell layout and shared geometry path state; if the geometry state grows, it should move into a dedicated hook or provider.
+- `AirfoilLibraryPage` still keeps placeholder catalog records as initial loading-state data.
+- The resize handles still update CSS grid dimensions directly; large list DOM size can make resizing expensive.
 - `Geometry Filter` and `Preview Output` are still placeholder graph nodes;
 - node execution currently only has real behavior for the database-root node.

@@ -1,5 +1,5 @@
-<!-- 中文：记录删除 mock_naca2412 数据库记录后，AirfoilLibraryPage 全量 geometry 预览链路的性能采样结果。
-English: Records AirfoilLibraryPage full-geometry preview performance samples after removing the mock_naca2412 database record. -->
+<!-- 中文：记录删除 mock_naca2412 数据库记录后，2026-06-20 当时 AirfoilLibraryPage 全量 geometry 预览链路的历史性能采样结果。
+English: Records historical 2026-06-20 AirfoilLibraryPage full-geometry preview performance samples after removing the mock_naca2412 database record. -->
 
 # Airfoil Library Page Performance Test After Mock Cleanup - 2026-06-20
 
@@ -8,6 +8,8 @@ English: Records AirfoilLibraryPage full-geometry preview performance samples af
 This test repeats the same data and preview-generation pipeline measured in
 `airfoil_library_page_2026-06-20.md`, after removing the stale
 `mock_naca2412.dat` database record.
+
+Current note: geometry loading and SVG path ownership later moved to `App.tsx`, so this file is a historical benchmark for the earlier page-owned pipeline.
 
 Measured pipeline per run:
 

@@ -104,9 +104,15 @@ type FileCatalogListResponse = {
 Current behavior:
 
 - returns one lightweight catalog item per `airfoils` row;
-- joins `geometry_metadata` for `max_thickness`;
-- joins `aerodynamic_metadata` at the requested Reynolds number for `cl_cd_max`;
+- left-joins `geometry_metadata` for `max_thickness`;
+- left-joins `aerodynamic_metadata` at the requested Reynolds number for `cl_cd_max`;
+- returns `null` for missing joined metadata fields instead of dropping the catalog row;
 - `file_path` is the project-relative path stored in PostgreSQL.
+
+Current frontend usage:
+
+- `AirfoilLibraryPage.tsx` uses this endpoint for the visible lightweight catalog.
+- `geometry.ts` also uses this endpoint to get the complete file-name list before requesting geometry file contents.
 
 ## Geometry Files
 
@@ -151,6 +157,12 @@ Current behavior:
 - backend returns cleaned `.dat` text from `coord_seligFmt_clean/`;
 - unknown file names return HTTP 400;
 - missing clean files return HTTP 404.
+
+Current frontend usage:
+
+- `loadAllGeometries()` sends the full catalog file-name list in one batch request.
+- If a batch geometry request fails with a file-level backend error, the frontend falls back to single-file reads and keeps the files that are available.
+- The response is parsed in `frontend/src/features/geometry/geometry.ts` into point arrays, bounds, renderability flags, and SVG paths.
 
 ## Geometry Filter
 

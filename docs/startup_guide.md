@@ -200,6 +200,12 @@ http://localhost:5173
 
 如果前端页面能打开，且后端健康检查返回 `ok`，说明三层服务已经连通。
 
+前端功能级检查：
+
+- Airfoil Library 面板应加载真实 catalog 条目；
+- catalog 卡片可能在 geometry 加载前短暂显示占位图，加载完成后应显示 SVG 翼型缩略图；
+- 点击任意 catalog 卡片后，该卡片应高亮，Viewport 面板应显示同一个翼型的 SVG 预览。
+
 ## Shutdown
 
 关闭前端和后端：

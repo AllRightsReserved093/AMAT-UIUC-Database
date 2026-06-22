@@ -12,6 +12,13 @@ import {
   useState,
 } from 'react'
 import { backendApi } from './api/backend'
+import {
+  buildAirfoilSvgPath,
+  loadAllGeometries,
+  processGeometries,
+  type ProcessedGeometry,
+  type ProcessedGeometryMap,
+} from './features/geometry/geometry'
 import AirfoilLibraryPage from './pages/AirfoilLibraryPage'
 import NodeEditorPage from './pages/NodeEditorPage'
 import PropertiesPage from './pages/PropertiesPage'
@@ -24,8 +31,43 @@ const MIN_PANEL_HEIGHT = 180
 
 type WorkspaceSizeVariable = '--list-width' | '--side-width' | '--node-height'
 
+type AirfoilPreviewPathMap = Record<string, string>
+
+type GeometryPreviewState = {
+  paths: AirfoilPreviewPathMap
+  isLoading: boolean
+  errorMessage: string | null
+}
+
 function clampPanelSize(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
+}
+
+// 中文：读取并处理几何文件，生成列表和 viewport 共用的 SVG path。
+// English: Loads and processes geometry files, then builds SVG paths shared by the list and viewport.
+async function importAirfoilPreviewPaths(signal?: AbortSignal): Promise<AirfoilPreviewPathMap> {
+  const rawGeometries = await loadAllGeometries(signal)
+  const geometries = processGeometries(rawGeometries)
+  return createAirfoilPreviewPathMap(geometries)
+}
+
+// 中文：把处理后的几何数据转换成按文件名索引的 SVG path。
+// English: Converts processed geometry into SVG paths keyed by file name.
+function createAirfoilPreviewPathMap(geometries: ProcessedGeometryMap): AirfoilPreviewPathMap {
+  const paths: AirfoilPreviewPathMap = {}
+
+  for (const [fileName, geometry] of Object.entries(geometries)) {
+    const previewPath = createAirfoilPreviewPath(geometry)
+    if (previewPath) paths[fileName] = previewPath
+  }
+
+  return paths
+}
+
+// 中文：为单个翼型生成固定 viewBox 的 SVG path。
+// English: Builds a fixed-viewBox SVG path for one airfoil.
+function createAirfoilPreviewPath(geometry: ProcessedGeometry): string | undefined {
+  return buildAirfoilSvgPath(geometry)
 }
 
 function App() {
@@ -40,6 +82,11 @@ function App() {
   const [sideWidth, setSideWidth] = useState(420)
   const [nodeHeight, setNodeHeight] = useState(300)
   const [selectedAirfoilFileName, setSelectedAirfoilFileName] = useState<string | null>(null)
+  const [geometryPreviewState, setGeometryPreviewState] = useState<GeometryPreviewState>({
+    paths: {},
+    isLoading: true,
+    errorMessage: null,
+  })
 
   useEffect(() => {
     function initializeApp() {
@@ -65,6 +112,32 @@ function App() {
     return () => {
       if (pendingWorkspaceSizeFrameRef.current === null) return
       window.cancelAnimationFrame(pendingWorkspaceSizeFrameRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    importAirfoilPreviewPaths(controller.signal)
+      .then((paths) => {
+        setGeometryPreviewState({
+          paths,
+          isLoading: false,
+          errorMessage: null,
+        })
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return
+
+        setGeometryPreviewState({
+          paths: {},
+          isLoading: false,
+          errorMessage: error instanceof Error ? error.message : 'Failed to load geometry previews.',
+        })
+      })
+
+    return () => {
+      controller.abort()
     }
   }, [])
 
@@ -219,6 +292,9 @@ function App() {
   }
 
   const workspaceStyle = createWorkspaceStyle()
+  const selectedAirfoilPath = selectedAirfoilFileName
+    ? geometryPreviewState.paths[selectedAirfoilFileName]
+    : undefined
 
   return (
     <div className="app" ref={workspaceRef} style={workspaceStyle}>
@@ -241,7 +317,13 @@ function App() {
       </header>
 
       <main className="workspace">
-        <ViewportPage displayText={viewportText} />
+        <ViewportPage
+          displayText={viewportText}
+          geometryErrorMessage={geometryPreviewState.errorMessage}
+          isGeometryLoading={geometryPreviewState.isLoading}
+          selectedAirfoilFileName={selectedAirfoilFileName}
+          selectedAirfoilPath={selectedAirfoilPath}
+        />
 
         <div
           className="resize-handle resize-handle-vertical"
@@ -253,6 +335,7 @@ function App() {
 
         <AirfoilLibraryPage
           onSelectAirfoil={selectAirfoil}
+          previewPaths={geometryPreviewState.paths}
           selectedAirfoilFileName={selectedAirfoilFileName}
         />
 

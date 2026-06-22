@@ -108,7 +108,9 @@ The service layer should stay focused on database work:
 - return ordinary Python structures such as `list[str]` or `list[dict[str, Any]]`;
 - avoid depending on FastAPI response models.
 
-File reading currently happens in `airfoil_api.py` for `POST /airfoils/geometry/files`. The database helper returns only database-stored paths; the public API returns file contents by file name.
+File reading currently happens in `airfoil_api.py` for `POST /airfoils/geometry/files`. The database helper returns only database-stored paths; the public API accepts file names and returns file contents keyed by file name.
+
+The frontend currently loads all available geometry text in one batch request, then parses and maps the geometry client-side for SVG list previews and selected-airfoil viewport rendering.
 
 ## Implemented Backend Capabilities
 

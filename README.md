@@ -3,12 +3,12 @@ English: Describes the AMATUIUCDatabase project goals, current status, structure
 
 # AMATUIUCDatabase
 
-AMATUIUCDatabase is an airfoil database workspace for browsing UIUC-format airfoil data, querying metadata, loading geometry files, and building a future node-based analysis workflow.
+AMATUIUCDatabase is an airfoil database workspace for browsing UIUC-format airfoil data, querying metadata, loading geometry files, rendering airfoil previews, and building a future node-based analysis workflow.
 
 The current project combines:
 
 - a PostgreSQL-backed FastAPI service for airfoil catalog, metadata, filter, and geometry-file access;
-- a Vite/React frontend prototype with a desktop-style workspace and a first-pass node editor;
+- a Vite/React frontend prototype with a desktop-style workspace, SVG airfoil previews, selected-airfoil viewport rendering, and a first-pass node editor;
 - Python preprocessing and batch-analysis scripts for raw coordinate files, cleaned coordinate files, geometry metadata, and XFoil result data.
 
 ## Target Functionality
@@ -17,8 +17,8 @@ The target frontend experience is a desktop-style airfoil workspace:
 
 - load a lightweight airfoil catalog for all database records;
 - display file names, paths, family metadata, basic geometry values, and selected aerodynamic values;
-- lazily request geometry files for visible or selected airfoils;
-- render airfoil previews and detailed viewport geometry;
+- load cleaned geometry files for frontend preview and viewport rendering;
+- render airfoil list previews and detailed viewport geometry;
 - inspect selected airfoil or node properties;
 - build simple data-processing flows in a node editor, starting from database roots and filter nodes.
 
@@ -29,7 +29,7 @@ catalog:
   Full lightweight database index used for list text, sorting, and basic filtering.
 
 geometry files:
-  Raw cleaned .dat text loaded by file name when needed for preview or viewport rendering.
+  Cleaned .dat text loaded by file name, parsed in the frontend, and converted into SVG paths.
 
 metadata:
   Full structured metadata loaded by file name when a detail view or node execution needs it.
@@ -46,15 +46,20 @@ Implemented and tested locally:
 - FastAPI health check;
 - full lightweight catalog API;
 - geometry file API returning cleaned `.dat` text by file name;
-- frontend API wrapper methods for catalog and geometry-file requests;
+- frontend API wrapper methods for catalog, geometry-file, metadata, and filter requests;
+- frontend full-geometry loading through `App.tsx`;
+- frontend geometry parsing, filtering, bounds calculation, SVG mapping, and path generation in `geometry.ts`;
+- SVG airfoil previews in the catalog list;
+- selected-airfoil SVG display in the viewport;
+- selected-card highlighting with memoized card/preview rendering;
 - cleaned coordinate output in `coord_seligFmt_clean/` generated from database-matching raw files.
 
 Partially implemented:
 
 - metadata query and insert routes exist, but the service functions are still placeholders;
-- geometry and aerodynamic filter routes exist;
+- geometry and aerodynamic filter routes exist, but the frontend filter UI is not wired yet;
 - frontend panels and node editor exist, but most visual workflows are still prototype-level;
-- geometry preview rendering is not yet wired into the frontend UI.
+- full catalog rendering is not virtualized yet, so large-list resize/render performance still needs work.
 
 ## Directory Structure
 
@@ -79,6 +84,7 @@ AMATUIUCDatabase/
 
 ## Documentation
 
+- [Startup Guide](docs/startup_guide.md)
 - [Backend Deployment](docs/backend_deployment.md)
 - [Backend Architecture](docs/backend_architecture.md)
 - [Frontend Architecture](docs/frontend_architecture.md)

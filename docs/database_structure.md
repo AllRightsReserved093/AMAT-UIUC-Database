@@ -124,23 +124,22 @@ The schema currently defines these indexes:
 
 ## Current Query Assumptions
 
-The frontend-facing catalog query currently joins all three tables:
+The frontend-facing catalog query currently uses `airfoils` as the root table and left-joins optional metadata:
 
 ```text
 airfoils
-  JOIN geometry_metadata ON geometry_metadata.airfoil_id = airfoils.id
-  JOIN aerodynamic_metadata ON aerodynamic_metadata.airfoil_id = airfoils.id
+  LEFT JOIN geometry_metadata ON geometry_metadata.airfoil_id = airfoils.id
+  LEFT JOIN aerodynamic_metadata ON aerodynamic_metadata.airfoil_id = airfoils.id
+    AND aerodynamic_metadata.reynolds_number = requested reynolds_number
 ```
 
-Then it filters aerodynamic rows by `reynolds_number`.
+The requested Reynolds number is part of the aerodynamic join condition.
 
 This means catalog results require:
 
-- one matching `airfoils` row;
-- one matching `geometry_metadata` row;
-- one matching `aerodynamic_metadata` row at the requested Reynolds number.
+- one matching `airfoils` row.
 
-If an airfoil exists but does not have matching geometry or aerodynamic metadata, the current catalog query will not return it.
+If an airfoil exists but does not have matching geometry or aerodynamic metadata, the current catalog query still returns it with nullable metadata fields such as `max_thickness` or `cl_cd_max`.
 
 ## File Path Assumptions
 
