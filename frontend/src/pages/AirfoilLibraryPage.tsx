@@ -20,8 +20,6 @@ import {
 // --------- Catalog Records ---------
 
 const DEFAULT_CATALOG_REYNOLDS_NUMBER = 1_000_000
-const ENABLE_PERFORMANCE_TEST_MODE = true
-const PERFORMANCE_TEST_RUN_COUNT = 10
 
 // 中文：后续 catalog API 可直接替换这类轻量列表记录，几何和完整 metadata 不放在这里。
 // English: The catalog API can later replace this lightweight list record; geometry and full metadata should stay outside it.
@@ -92,7 +90,6 @@ type AirfoilListProps = {
   cards: AirfoilCardViewModel[]
   isLoading: boolean
   errorMessage: string | null
-  performanceState?: AirfoilLibraryPerformanceState
 }
 
 type AirfoilCardProps = {
@@ -113,33 +110,6 @@ type GeometryPreviewState = {
   errorMessage: string | null
 }
 
-type AirfoilLibraryPerformanceSample = {
-  run: number
-  catalogFetchMs: number
-  geometryLoadMs: number
-  geometryProcessMs: number
-  previewPathBuildMs: number
-  cardModelBuildMs: number
-  totalMs: number
-  catalogCount: number
-  rawGeometryCount: number
-  processedGeometryCount: number
-  previewPathCount: number
-  cardCount: number
-}
-
-type AirfoilLibraryPerformanceState = {
-  isRunning: boolean
-  samples: AirfoilLibraryPerformanceSample[]
-  errorMessage: string | null
-}
-
-type AirfoilLibraryPerformanceResult = {
-  samples: AirfoilLibraryPerformanceSample[]
-  records: AirfoilCatalogRecord[]
-  previewPaths: AirfoilPreviewPathMap
-}
-
 // --------- Catalog Import ---------
 
 // 中文：从真实后端 catalog 导入全量轻量翼型记录。
@@ -155,67 +125,6 @@ async function importAirfoilPreviewPaths(signal?: AbortSignal): Promise<AirfoilP
   const rawGeometries = await loadAllGeometries(signal)
   const geometries = processGeometries(rawGeometries)
   return createAirfoilPreviewPathMap(geometries)
-}
-
-// 中文：运行翼型库当前加载和预览生成链路的性能采样。
-// English: Runs performance samples for the current airfoil-library loading and preview-generation pipeline.
-async function runAirfoilLibraryPerformanceTests(
-  runCount: number,
-  signal?: AbortSignal,
-): Promise<AirfoilLibraryPerformanceResult> {
-  const samples: AirfoilLibraryPerformanceSample[] = []
-  let latestRecords: AirfoilCatalogRecord[] = []
-  let latestPreviewPaths: AirfoilPreviewPathMap = {}
-
-  for (let run = 1; run <= runCount; run += 1) {
-    throwIfAborted(signal)
-
-    const totalStartedAt = performance.now()
-
-    const catalogStartedAt = performance.now()
-    const records = await importFullCatalogRecords(signal)
-    const catalogFetchMs = performance.now() - catalogStartedAt
-
-    const geometryLoadStartedAt = performance.now()
-    const rawGeometries = await loadAllGeometries(signal)
-    const geometryLoadMs = performance.now() - geometryLoadStartedAt
-
-    const geometryProcessStartedAt = performance.now()
-    const geometries = processGeometries(rawGeometries)
-    const geometryProcessMs = performance.now() - geometryProcessStartedAt
-
-    const previewPathStartedAt = performance.now()
-    const previewPaths = createAirfoilPreviewPathMap(geometries)
-    const previewPathBuildMs = performance.now() - previewPathStartedAt
-
-    const cardModelStartedAt = performance.now()
-    const cards = records.map((record) => createAirfoilCardViewModel(record, previewPaths))
-    const cardModelBuildMs = performance.now() - cardModelStartedAt
-
-    latestRecords = records
-    latestPreviewPaths = previewPaths
-
-    samples.push({
-      run,
-      catalogFetchMs,
-      geometryLoadMs,
-      geometryProcessMs,
-      previewPathBuildMs,
-      cardModelBuildMs,
-      totalMs: performance.now() - totalStartedAt,
-      catalogCount: records.length,
-      rawGeometryCount: Object.keys(rawGeometries).length,
-      processedGeometryCount: Object.keys(geometries).length,
-      previewPathCount: Object.keys(previewPaths).length,
-      cardCount: cards.length,
-    })
-  }
-
-  return {
-    samples,
-    records: latestRecords,
-    previewPaths: latestPreviewPaths,
-  }
 }
 
 // --------- Card Model Builders ---------
@@ -283,38 +192,6 @@ function formatNumber(value: number | null | undefined): string {
   return typeof value === 'number' ? value.toFixed(2) : 'Unknown'
 }
 
-// 中文：格式化性能采样耗时。
-// English: Formats performance sample durations.
-function formatMilliseconds(value: number): string {
-  return `${value.toFixed(1)} ms`
-}
-
-// 中文：计算性能采样的平均耗时。
-// English: Calculates the average duration for performance samples.
-function averageSampleDuration(
-  samples: AirfoilLibraryPerformanceSample[],
-  field: keyof Pick<
-    AirfoilLibraryPerformanceSample,
-    | 'catalogFetchMs'
-    | 'geometryLoadMs'
-    | 'geometryProcessMs'
-    | 'previewPathBuildMs'
-    | 'cardModelBuildMs'
-    | 'totalMs'
-  >,
-): number {
-  if (samples.length === 0) return 0
-  return samples.reduce((sum, sample) => sum + sample[field], 0) / samples.length
-}
-
-// 中文：在取消测试时中断后续采样。
-// English: Stops later samples when the test is aborted.
-function throwIfAborted(signal?: AbortSignal): void {
-  if (signal?.aborted) {
-    throw new DOMException('Performance test aborted.', 'AbortError')
-  }
-}
-
 // --------- View Components ---------
 
 // 中文：渲染翼型库面板标题和页面级操作按钮。
@@ -332,7 +209,7 @@ function AirfoilLibraryHeader({ title, sortButtonLabel }: AirfoilLibraryHeaderPr
 
 // 中文：渲染翼型列表容器，并把每个卡片模型交给卡片组件展示。
 // English: Renders the airfoil list container and delegates each card model to the card component.
-function AirfoilList({ cards, isLoading, errorMessage, performanceState }: AirfoilListProps) {
+function AirfoilList({ cards, isLoading, errorMessage }: AirfoilListProps) {
   if (isLoading) {
     return (
       <div className="airfoil-list">
@@ -351,43 +228,9 @@ function AirfoilList({ cards, isLoading, errorMessage, performanceState }: Airfo
 
   return (
     <div className="airfoil-list">
-      {performanceState ? (
-        <AirfoilPerformanceSummary performanceState={performanceState} />
-      ) : null}
       {cards.map((card) => (
         <AirfoilCard card={card} key={card.id} />
       ))}
-    </div>
-  )
-}
-
-// 中文：显示当前性能测试采样的简要结果。
-// English: Shows a compact summary of the current performance samples.
-function AirfoilPerformanceSummary({
-  performanceState,
-}: {
-  performanceState: AirfoilLibraryPerformanceState
-}) {
-  if (performanceState.isRunning) {
-    return (
-      <div className="airfoil-list-status">
-        Running performance test {performanceState.samples.length}/{PERFORMANCE_TEST_RUN_COUNT}...
-      </div>
-    )
-  }
-
-  if (performanceState.errorMessage) {
-    return <div className="airfoil-list-status">{performanceState.errorMessage}</div>
-  }
-
-  if (performanceState.samples.length === 0) return null
-
-  return (
-    <div className="airfoil-list-status">
-      Performance test complete: {performanceState.samples.length} runs, avg total{' '}
-      {formatMilliseconds(averageSampleDuration(performanceState.samples, 'totalMs'))}, avg
-      geometry load{' '}
-      {formatMilliseconds(averageSampleDuration(performanceState.samples, 'geometryLoadMs'))}.
     </div>
   )
 }
@@ -430,15 +273,8 @@ function AirfoilLibraryPage() {
     isLoading: true,
     errorMessage: null,
   })
-  const [performanceState, setPerformanceState] = useState<AirfoilLibraryPerformanceState>({
-    isRunning: ENABLE_PERFORMANCE_TEST_MODE,
-    samples: [],
-    errorMessage: null,
-  })
 
   useEffect(() => {
-    if (ENABLE_PERFORMANCE_TEST_MODE) return
-
     const controller = new AbortController()
 
     importFullCatalogRecords(controller.signal)
@@ -465,8 +301,6 @@ function AirfoilLibraryPage() {
   }, [])
 
   useEffect(() => {
-    if (ENABLE_PERFORMANCE_TEST_MODE) return
-
     const controller = new AbortController()
 
     importAirfoilPreviewPaths(controller.signal)
@@ -492,56 +326,6 @@ function AirfoilLibraryPage() {
     }
   }, [])
 
-  useEffect(() => {
-    if (!ENABLE_PERFORMANCE_TEST_MODE) return
-
-    const controller = new AbortController()
-
-    runAirfoilLibraryPerformanceTests(PERFORMANCE_TEST_RUN_COUNT, controller.signal)
-      .then((result) => {
-        console.table(result.samples)
-
-        setCatalogImportState({
-          records: result.records,
-          isLoading: false,
-          errorMessage: null,
-        })
-        setGeometryPreviewState({
-          paths: result.previewPaths,
-          isLoading: false,
-          errorMessage: null,
-        })
-        setPerformanceState({
-          isRunning: false,
-          samples: result.samples,
-          errorMessage: null,
-        })
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return
-
-        setCatalogImportState({
-          records: [],
-          isLoading: false,
-          errorMessage: error instanceof Error ? error.message : 'Performance test failed.',
-        })
-        setGeometryPreviewState({
-          paths: {},
-          isLoading: false,
-          errorMessage: null,
-        })
-        setPerformanceState({
-          isRunning: false,
-          samples: [],
-          errorMessage: error instanceof Error ? error.message : 'Performance test failed.',
-        })
-      })
-
-    return () => {
-      controller.abort()
-    }
-  }, [])
-
   const cards = catalogImportState.records.map((record) =>
     createAirfoilCardViewModel(record, geometryPreviewState.paths),
   )
@@ -553,7 +337,6 @@ function AirfoilLibraryPage() {
         cards={cards}
         errorMessage={catalogImportState.errorMessage}
         isLoading={catalogImportState.isLoading}
-        performanceState={ENABLE_PERFORMANCE_TEST_MODE ? performanceState : undefined}
       />
     </section>
   )
