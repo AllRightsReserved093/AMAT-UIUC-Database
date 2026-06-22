@@ -6,7 +6,7 @@ File purpose: Displays the airfoil library page, loads the backend catalog, and 
 Structure note: This file is organized as data records -> card models -> view components -> page entry to keep JSX separate from data preparation.
 */
 
-import { useEffect, useState } from 'react'
+import { type KeyboardEvent, useEffect, useState } from 'react'
 import AirfoilPreview from '../features/airfoil-library/AirfoilPreview'
 import { backendApi, type FileCatalogListResponse } from '../api/backend'
 import {
@@ -90,10 +90,19 @@ type AirfoilListProps = {
   cards: AirfoilCardViewModel[]
   isLoading: boolean
   errorMessage: string | null
+  selectedAirfoilFileName: string | null
+  onSelectAirfoil: (fileName: string) => void
 }
 
 type AirfoilCardProps = {
   card: AirfoilCardViewModel
+  isSelected: boolean
+  onSelectAirfoil: (fileName: string) => void
+}
+
+type AirfoilLibraryPageProps = {
+  selectedAirfoilFileName: string | null
+  onSelectAirfoil: (fileName: string) => void
 }
 
 type CatalogImportState = {
@@ -209,7 +218,13 @@ function AirfoilLibraryHeader({ title, sortButtonLabel }: AirfoilLibraryHeaderPr
 
 // 中文：渲染翼型列表容器，并把每个卡片模型交给卡片组件展示。
 // English: Renders the airfoil list container and delegates each card model to the card component.
-function AirfoilList({ cards, isLoading, errorMessage }: AirfoilListProps) {
+function AirfoilList({
+  cards,
+  isLoading,
+  errorMessage,
+  selectedAirfoilFileName,
+  onSelectAirfoil,
+}: AirfoilListProps) {
   if (isLoading) {
     return (
       <div className="airfoil-list">
@@ -227,9 +242,14 @@ function AirfoilList({ cards, isLoading, errorMessage }: AirfoilListProps) {
   }
 
   return (
-    <div className="airfoil-list">
+    <div aria-label="Airfoil library" className="airfoil-list" role="listbox">
       {cards.map((card) => (
-        <AirfoilCard card={card} key={card.id} />
+        <AirfoilCard
+          card={card}
+          isSelected={card.id === selectedAirfoilFileName}
+          key={card.id}
+          onSelectAirfoil={onSelectAirfoil}
+        />
       ))}
     </div>
   )
@@ -237,9 +257,27 @@ function AirfoilList({ cards, isLoading, errorMessage }: AirfoilListProps) {
 
 // 中文：渲染单个翼型卡片，组合预览、基础信息和标签区域。
 // English: Renders one airfoil card by composing preview, metadata, and tag sections.
-function AirfoilCard({ card }: AirfoilCardProps) {
+function AirfoilCard({ card, isSelected, onSelectAirfoil }: AirfoilCardProps) {
+  function selectCurrentAirfoil() {
+    onSelectAirfoil(card.id)
+  }
+
+  function handleCardKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+
+    event.preventDefault()
+    selectCurrentAirfoil()
+  }
+
   return (
-    <article className="airfoil-card">
+    <article
+      aria-selected={isSelected}
+      className={`airfoil-card${isSelected ? ' airfoil-card-selected' : ''}`}
+      onClick={selectCurrentAirfoil}
+      onKeyDown={handleCardKeyDown}
+      role="option"
+      tabIndex={0}
+    >
       <div className="airfoil-thumb">
         <AirfoilPreview label={card.previewLabel} path={card.previewPath} />
       </div>
@@ -262,7 +300,10 @@ function AirfoilCard({ card }: AirfoilCardProps) {
 
 // 中文：页面入口负责准备卡片模型，并组合页面级区域。
 // English: The page entry prepares card models and composes page-level regions.
-function AirfoilLibraryPage() {
+function AirfoilLibraryPage({
+  selectedAirfoilFileName,
+  onSelectAirfoil,
+}: AirfoilLibraryPageProps) {
   const [catalogImportState, setCatalogImportState] = useState<CatalogImportState>({
     records: placeholderCatalogRecords,
     isLoading: true,
@@ -337,6 +378,8 @@ function AirfoilLibraryPage() {
         cards={cards}
         errorMessage={catalogImportState.errorMessage}
         isLoading={catalogImportState.isLoading}
+        onSelectAirfoil={onSelectAirfoil}
+        selectedAirfoilFileName={selectedAirfoilFileName}
       />
     </section>
   )

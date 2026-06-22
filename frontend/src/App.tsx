@@ -1,4 +1,15 @@
-import { type CSSProperties, useCallback, useEffect, useRef, useState } from 'react'
+/*
+文件功能：应用外壳组件，负责主工作区布局、跨面板状态和顶层交互协调。
+File purpose: Provides the application shell for workspace layout, cross-panel state, and top-level interaction coordination.
+*/
+
+import {
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import { backendApi } from './api/backend'
 import AirfoilLibraryPage from './pages/AirfoilLibraryPage'
 import NodeEditorPage from './pages/NodeEditorPage'
@@ -10,28 +21,39 @@ const MIN_LIST_WIDTH = 320
 const MIN_SIDE_WIDTH = 280
 const MIN_PANEL_HEIGHT = 180
 
+function clampPanelSize(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
+}
+
 function App() {
   const workspaceRef = useRef<HTMLDivElement>(null)
   const [viewportText, setViewportText] = useState<string>()
   const [listWidth, setListWidth] = useState(360)
   const [sideWidth, setSideWidth] = useState(420)
   const [nodeHeight, setNodeHeight] = useState(300)
+  const [selectedAirfoilFileName, setSelectedAirfoilFileName] = useState<string | null>(null)
 
   useEffect(() => {
-    console.log('App initialized')
+    function initializeApp() {
+      console.log('App initialized')
+      checkBackendConnection()
+    }
 
-    // Health check for backend connectivity.
-    backendApi.health()
-      .then((response) => {
-        setViewportText('This is a test text.')
-        console.log('Backend status:', response.status)
-      })
-      .catch((error) => {
-        console.error('Cannot connect to backend:', error)
-      })
+    function checkBackendConnection() {
+      backendApi.health()
+        .then((response) => {
+          setViewportText('This is a test text.')
+          console.log('Backend status:', response.status)
+        })
+        .catch((error) => {
+          console.error('Cannot connect to backend:', error)
+        })
+    }
+
+    initializeApp()
   }, [])
 
-  const beginListResize = useCallback((event: React.PointerEvent) => {
+  function beginListResize(event: ReactPointerEvent) {
     event.preventDefault()
     const workspace = workspaceRef.current
     const listPanel = event.currentTarget.nextElementSibling
@@ -46,7 +68,7 @@ function App() {
 
     function handlePointerMove(moveEvent: PointerEvent) {
       const nextWidth = listBounds.right - moveEvent.clientX
-      setListWidth(Math.min(Math.max(nextWidth, MIN_LIST_WIDTH), maxListWidth))
+      setListWidth(clampPanelSize(nextWidth, MIN_LIST_WIDTH, maxListWidth))
     }
 
     function handlePointerUp() {
@@ -56,9 +78,9 @@ function App() {
 
     window.addEventListener('pointermove', handlePointerMove)
     window.addEventListener('pointerup', handlePointerUp)
-  }, [])
+  }
 
-  const beginSideResize = useCallback((event: React.PointerEvent) => {
+  function beginSideResize(event: ReactPointerEvent) {
     event.preventDefault()
     const workspace = workspaceRef.current
     if (!workspace) return
@@ -71,7 +93,7 @@ function App() {
 
     function handlePointerMove(moveEvent: PointerEvent) {
       const nextWidth = bounds.right - moveEvent.clientX
-      setSideWidth(Math.min(Math.max(nextWidth, MIN_SIDE_WIDTH), maxSideWidth))
+      setSideWidth(clampPanelSize(nextWidth, MIN_SIDE_WIDTH, maxSideWidth))
     }
 
     function handlePointerUp() {
@@ -81,9 +103,9 @@ function App() {
 
     window.addEventListener('pointermove', handlePointerMove)
     window.addEventListener('pointerup', handlePointerUp)
-  }, [])
+  }
 
-  const beginNodeResize = useCallback((event: React.PointerEvent) => {
+  function beginNodeResize(event: ReactPointerEvent) {
     event.preventDefault()
     const sideStack = event.currentTarget.parentElement
     if (!sideStack) return
@@ -93,7 +115,7 @@ function App() {
 
     function handlePointerMove(moveEvent: PointerEvent) {
       const nextHeight = bounds.bottom - moveEvent.clientY
-      setNodeHeight(Math.min(Math.max(nextHeight, MIN_PANEL_HEIGHT), maxNodeHeight))
+      setNodeHeight(clampPanelSize(nextHeight, MIN_PANEL_HEIGHT, maxNodeHeight))
     }
 
     function handlePointerUp() {
@@ -103,13 +125,21 @@ function App() {
 
     window.addEventListener('pointermove', handlePointerMove)
     window.addEventListener('pointerup', handlePointerUp)
-  }, [])
+  }
 
-  const workspaceStyle = {
-    '--list-width': `${listWidth}px`,
-    '--side-width': `${sideWidth}px`,
-    '--node-height': `${nodeHeight}px`,
-  } as CSSProperties
+  function selectAirfoil(fileName: string) {
+    setSelectedAirfoilFileName(fileName)
+  }
+
+  function createWorkspaceStyle() {
+    return {
+      '--list-width': `${listWidth}px`,
+      '--side-width': `${sideWidth}px`,
+      '--node-height': `${nodeHeight}px`,
+    } as CSSProperties
+  }
+
+  const workspaceStyle = createWorkspaceStyle()
 
   return (
     <div className="app" ref={workspaceRef} style={workspaceStyle}>
@@ -142,7 +172,10 @@ function App() {
           aria-label="Resize airfoil list"
         />
 
-        <AirfoilLibraryPage />
+        <AirfoilLibraryPage
+          onSelectAirfoil={selectAirfoil}
+          selectedAirfoilFileName={selectedAirfoilFileName}
+        />
 
         <div
           className="resize-handle resize-handle-vertical"

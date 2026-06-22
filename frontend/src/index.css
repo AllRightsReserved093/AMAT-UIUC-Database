@@ -379,11 +379,28 @@ button:hover {
   background: #22262d;
   border: 1px solid var(--border);
   border-radius: 5px;
+  cursor: pointer;
 }
 
 .airfoil-card:hover {
   border-color: var(--border-strong);
   background: #262b33;
+}
+
+.airfoil-card:focus-visible {
+  outline: 2px solid #82c0ff;
+  outline-offset: 2px;
+}
+
+.airfoil-card-selected {
+  background: #213042;
+  border-color: #82c0ff;
+  box-shadow: inset 3px 0 0 #82c0ff;
+}
+
+.airfoil-card-selected:hover {
+  background: #26384d;
+  border-color: #9ccfff;
 }
 
 .airfoil-thumb {
