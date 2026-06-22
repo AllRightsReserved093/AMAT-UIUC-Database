@@ -3,6 +3,7 @@
 File purpose: Reserves the airfoil preview component location for rendering SVG previews or lazy-loaded preview images.
 */
 
+import { memo } from 'react'
 import heroPreviewImage from '../../assets/hero.png'
 
 type AirfoilPreviewProps = {
@@ -12,7 +13,10 @@ type AirfoilPreviewProps = {
 
 // 中文：优先渲染真实翼型 SVG path；没有 path 时回退到占位图。
 // English: Renders the real airfoil SVG path first, falling back to the placeholder image when no path exists.
-function AirfoilPreview({ label = 'Airfoil preview placeholder', path }: AirfoilPreviewProps) {
+const AirfoilPreview = memo(function AirfoilPreview({
+  label = 'Airfoil preview placeholder',
+  path,
+}: AirfoilPreviewProps) {
   if (path) {
     return (
       <svg
@@ -32,6 +36,6 @@ function AirfoilPreview({ label = 'Airfoil preview placeholder', path }: Airfoil
       src={heroPreviewImage}
     />
   )
-}
+})
 
 export default AirfoilPreview

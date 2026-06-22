@@ -6,7 +6,7 @@ File purpose: Displays the airfoil library page, loads the backend catalog, and 
 Structure note: This file is organized as data records -> card models -> view components -> page entry to keep JSX separate from data preparation.
 */
 
-import { type KeyboardEvent, useEffect, useState } from 'react'
+import { memo, type KeyboardEvent, useEffect, useMemo, useState } from 'react'
 import AirfoilPreview from '../features/airfoil-library/AirfoilPreview'
 import { backendApi, type FileCatalogListResponse } from '../api/backend'
 import {
@@ -257,7 +257,11 @@ function AirfoilList({
 
 // 中文：渲染单个翼型卡片，组合预览、基础信息和标签区域。
 // English: Renders one airfoil card by composing preview, metadata, and tag sections.
-function AirfoilCard({ card, isSelected, onSelectAirfoil }: AirfoilCardProps) {
+const AirfoilCard = memo(function AirfoilCard({
+  card,
+  isSelected,
+  onSelectAirfoil,
+}: AirfoilCardProps) {
   function selectCurrentAirfoil() {
     onSelectAirfoil(card.id)
   }
@@ -294,7 +298,7 @@ function AirfoilCard({ card, isSelected, onSelectAirfoil }: AirfoilCardProps) {
       </div>
     </article>
   )
-}
+})
 
 // --------- Page Entry ---------
 
@@ -367,9 +371,11 @@ function AirfoilLibraryPage({
     }
   }, [])
 
-  const cards = catalogImportState.records.map((record) =>
-    createAirfoilCardViewModel(record, geometryPreviewState.paths),
-  )
+  const cards = useMemo(() => {
+    return catalogImportState.records.map((record) =>
+      createAirfoilCardViewModel(record, geometryPreviewState.paths),
+    )
+  }, [catalogImportState.records, geometryPreviewState.paths])
 
   return (
     <section className="panel airfoil-list-panel">

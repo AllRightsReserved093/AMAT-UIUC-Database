@@ -6,6 +6,7 @@ File purpose: Provides the application shell for workspace layout, cross-panel s
 import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -202,9 +203,12 @@ function App() {
     window.addEventListener('pointercancel', handlePointerEnd)
   }
 
-  function selectAirfoil(fileName: string) {
-    setSelectedAirfoilFileName(fileName)
-  }
+  const selectAirfoil = useCallback(function selectAirfoil(fileName: string) {
+    setSelectedAirfoilFileName((currentFileName) => {
+      if (currentFileName === fileName) return currentFileName
+      return fileName
+    })
+  }, [])
 
   function createWorkspaceStyle() {
     return {
