@@ -30,13 +30,18 @@ import {
 import {
   DATABASE_FILENAMES_OUTPUT_ID,
   DATABASE_ROOT_NODE_ID,
+  NODE_EDITOR_EXPORT_NODE_TYPE,
+  calculatePinnedExportNodePosition,
   createDatabaseRootNode,
   createInputPortId,
+  createNodeEditorExportNode,
   createNodeId,
   createOutputPortId,
   createTemplateNode,
   executeDatabaseRootNode,
   nodeTypes,
+  type NodeEditorExportNodeData,
+  type NodeEditorExportOutlet,
   type TemplateNodeData,
   type TemplateNodeOutputData,
   type TemplateNodeOutputStatus,
@@ -49,6 +54,9 @@ const DATABASE_ROOT_NODE_TYPE = 'databaseRootNode'
 const GEOMETRY_FILTER_NODE_ID = createNodeId('geometryFilter', 0)
 const PREVIEW_OUTPUT_NODE_ID = createNodeId('previewOutput', 0)
 const TEMPLATE_NODE_ID = createNodeId('templateNode', 0)
+const INITIAL_EXPORT_NODE_X = 820
+const INITIAL_EXPORT_NODE_Y = 70
+const INITIAL_EXPORT_NODE_VERTICAL_STEP = 58
 
 // --------- Editor Types ---------
 
@@ -64,6 +72,89 @@ type ExecutionResult = {
 
 type TemplateOutput = TemplateNodeOutputData<string, unknown>
 type TemplateData = TemplateNodeData<TemplateOutput>
+
+// --------- Export Outlets ---------
+
+const nodeEditorExportOutlets: NodeEditorExportOutlet[] = [
+  {
+    id: 'list',
+    label: 'List',
+    valueKind: 'file-name-list',
+    order: 0,
+  },
+]
+
+// --------- Export Node Layout ---------
+
+// 临时初始位置：真正 pinned 坐标刷新后会改为调用 calculatePinnedExportNodePosition。
+// Temporary initial position: true pinned-coordinate updates will later call calculatePinnedExportNodePosition.
+function getInitialExportNodePosition(order: number): XYPosition {
+  return {
+    x: INITIAL_EXPORT_NODE_X,
+    y: INITIAL_EXPORT_NODE_Y + order * INITIAL_EXPORT_NODE_VERTICAL_STEP,
+  }
+}
+
+// 按 order 创建导出口节点。一个 outlet 对应一个不可拖动的 React Flow node。
+// Create export nodes by order. One outlet maps to one non-draggable React Flow node.
+function createInitialExportNodes(outlets: NodeEditorExportOutlet[]): Node[] {
+  return [...outlets]
+    .sort((firstOutlet, secondOutlet) => firstOutlet.order - secondOutlet.order)
+    .map((outlet) => createNodeEditorExportNode(
+      outlet,
+      getInitialExportNodePosition(outlet.order),
+    ))
+}
+
+// 判断节点是否是 pinned export node，后续只对这类节点做位置同步。
+// Check whether a node is a pinned export node so only these nodes are repositioned.
+function isNodeEditorExportNode(
+  node: Node,
+): node is Node<NodeEditorExportNodeData, typeof NODE_EDITOR_EXPORT_NODE_TYPE> {
+  return node.type === NODE_EDITOR_EXPORT_NODE_TYPE
+    && typeof (node.data as Partial<NodeEditorExportNodeData>).order === 'number'
+}
+
+// 避免相同坐标重复创建新 node 对象，减少无意义的 React Flow 更新。
+// Avoid creating new node objects for identical coordinates to reduce unnecessary React Flow updates.
+function hasSamePosition(firstPosition: XYPosition, secondPosition: XYPosition): boolean {
+  return firstPosition.x === secondPosition.x && firstPosition.y === secondPosition.y
+}
+
+// 根据当前编辑器尺寸和 viewport，把所有 export node 贴回节点编辑器右上侧。
+// Pin all export nodes back to the upper-right side of the node editor from the current editor size and viewport.
+function updatePinnedExportNodePositions(
+  nodes: Node[],
+  flowInstance: ReactFlowInstance,
+  editorElement: HTMLElement,
+): Node[] {
+  const editorBounds = editorElement.getBoundingClientRect()
+  let hasPositionChanges = false
+
+  const nextNodes = nodes.map((node) => {
+    if (!isNodeEditorExportNode(node)) return node
+
+    const nextPosition = calculatePinnedExportNodePosition(node.data.order, {
+      editorBounds: {
+        top: editorBounds.top,
+        right: editorBounds.right,
+      },
+      screenToFlowPosition: (clientPosition) => (
+        flowInstance.screenToFlowPosition(clientPosition)
+      ),
+    })
+
+    if (hasSamePosition(node.position, nextPosition)) return node
+
+    hasPositionChanges = true
+    return {
+      ...node,
+      position: nextPosition,
+    }
+  })
+
+  return hasPositionChanges ? nextNodes : nodes
+}
 
 // --------- Initial Graph ---------
 
@@ -103,6 +194,7 @@ const initialNodes: Node[] = [
       ],
     },
   }),
+  ...createInitialExportNodes(nodeEditorExportOutlets),
 ]
 
 const initialEdges: Edge[] = [
@@ -384,14 +476,13 @@ async function executeNodeGraph(
   }
 }
 
-// --------- Component Rendering ---------
-
 // 节点编辑器页面组件：负责编辑图结构、显示右键菜单，并在结构变化后触发执行器。
 // Node editor page component: edits graph structure, shows the context menu, and triggers the executor after structural changes.
 function NodeEditorPage() {
   const editorRef = useRef<HTMLDivElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
   const executionIdRef = useRef(0)
+  const pinnedNodeSyncFrameRef = useRef<number | null>(null)
   const nodesRef = useRef<Node[]>(initialNodes)
   const edgesRef = useRef<Edge[]>(initialEdges)
 
@@ -400,9 +491,6 @@ function NodeEditorPage() {
   const [flowInstance, setFlowInstance] = useState<ReactFlowInstance | null>(null)
   const [nodeMenu, setNodeMenu] = useState<NodeMenuState | null>(null)
   const [executionVersion, setExecutionVersion] = useState(0)
-
-  nodesRef.current = nodes
-  edgesRef.current = edges
 
   // 关闭右键菜单。
   // Close the context menu.
@@ -415,6 +503,48 @@ function NodeEditorPage() {
   const requestExecution = useCallback(() => {
     setExecutionVersion((currentVersion) => currentVersion + 1)
   }, [])
+
+  // 立即同步 pinned export node 坐标。
+  // Immediately sync pinned export node coordinates.
+  const syncPinnedExportNodes = useCallback((activeFlowInstance = flowInstance) => {
+    const editorElement = editorRef.current
+    if (!activeFlowInstance || !editorElement) return
+
+    setNodes((currentNodes) => (
+      updatePinnedExportNodePositions(currentNodes, activeFlowInstance, editorElement)
+    ))
+  }, [flowInstance, setNodes])
+
+  // 把高频 viewport/resize 事件合并到下一帧执行。
+  // Coalesce high-frequency viewport and resize events into the next animation frame.
+  const schedulePinnedExportNodeSync = useCallback((activeFlowInstance = flowInstance) => {
+    if (!activeFlowInstance || pinnedNodeSyncFrameRef.current !== null) return
+
+    pinnedNodeSyncFrameRef.current = window.requestAnimationFrame(() => {
+      pinnedNodeSyncFrameRef.current = null
+      syncPinnedExportNodes(activeFlowInstance)
+    })
+  }, [flowInstance, syncPinnedExportNodes])
+
+  // React Flow 初始化后保存实例，并立刻把导出口节点贴到当前可见区域右上侧。
+  // Store the React Flow instance after init and pin export nodes to the visible upper-right area immediately.
+  const handleFlowInit = useCallback((activeFlowInstance: ReactFlowInstance) => {
+    setFlowInstance(activeFlowInstance)
+    syncPinnedExportNodes(activeFlowInstance)
+  }, [syncPinnedExportNodes])
+
+  // viewport 平移或缩放时立即重新计算导出口节点位置，减少 pinned node 的视觉滞后。
+  // Recalculate export-node positions immediately when the viewport pans or zooms to reduce visual lag.
+  const handleViewportMove = useCallback(() => {
+    syncPinnedExportNodes()
+  }, [syncPinnedExportNodes])
+
+  // viewport 开始移动时关闭菜单，并保持导出口节点贴边。
+  // Close the context menu when viewport movement starts, then keep export nodes pinned.
+  const handleViewportMoveStart = useCallback(() => {
+    closeNodeMenu()
+    syncPinnedExportNodes()
+  }, [closeNodeMenu, syncPinnedExportNodes])
 
   // 处理画布右键：阻止浏览器菜单，保存菜单显示坐标和节点放置坐标。
   // Handle canvas right-click: block the browser menu and store both menu and node placement positions.
@@ -509,6 +639,42 @@ function NodeEditorPage() {
     }
   }, [closeNodeMenu, nodeMenu])
 
+  // 节点编辑器尺寸变化时重新同步 pinned export node。
+  // Resync pinned export nodes when the node editor size changes.
+  useEffect(() => {
+    const editorElement = editorRef.current
+    if (!flowInstance || !editorElement) return undefined
+
+    const resizeObserver = new ResizeObserver(() => {
+      schedulePinnedExportNodeSync(flowInstance)
+    })
+
+    resizeObserver.observe(editorElement)
+    schedulePinnedExportNodeSync(flowInstance)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [flowInstance, schedulePinnedExportNodeSync])
+
+  // 组件卸载时清理尚未执行的 pinned node 同步帧。
+  // Clear any pending pinned-node sync frame on component unmount.
+  useEffect(() => (
+    () => {
+      if (pinnedNodeSyncFrameRef.current === null) return
+
+      window.cancelAnimationFrame(pinnedNodeSyncFrameRef.current)
+      pinnedNodeSyncFrameRef.current = null
+    }
+  ), [])
+
+  // 同步最新图结构到 ref，供异步执行器读取。
+  // Sync the latest graph structure into refs for the async executor.
+  useEffect(() => {
+    nodesRef.current = nodes
+    edgesRef.current = edges
+  }, [edges, nodes])
+
   // 图结构变化后执行整张图；过期执行会被 executionIdRef 取消写回。
   // Execute the graph after structural changes; stale executions are prevented from writing back by executionIdRef.
   useEffect(() => {
@@ -524,46 +690,50 @@ function NodeEditorPage() {
   }, [executionVersion, setNodes])
 
   return (
-    <div
-      className="node-editor"
-      onContextMenu={handleContextMenu}
-      onWheel={closeNodeMenu}
-      ref={editorRef}
-    >
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        onConnect={handleConnect}
-        onConnectStart={closeNodeMenu}
-        onEdgesChange={handleEdgesChange}
-        onInit={setFlowInstance}
-        onMoveStart={closeNodeMenu}
-        onNodesChange={handleNodesChange}
-        onPaneClick={closeNodeMenu}
-        fitView
+    <div className="node-editor">
+      <div
+        className="node-editor-canvas"
+        onContextMenu={handleContextMenu}
+        onWheel={closeNodeMenu}
+        ref={editorRef}
       >
-        <Background gap={20} size={1} />
-        <Controls position="bottom-left" />
-        <MiniMap pannable zoomable />
-      </ReactFlow>
-
-      {nodeMenu && (
-        <div
-          className="node-editor-context-menu"
-          onContextMenu={(event) => event.preventDefault()}
-          ref={menuRef}
-          style={{
-            left: nodeMenu.screenPosition.x,
-            top: nodeMenu.screenPosition.y,
-          }}
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          onConnect={handleConnect}
+          onConnectStart={closeNodeMenu}
+          onEdgesChange={handleEdgesChange}
+          onInit={handleFlowInit}
+          onMove={handleViewportMove}
+          onMoveEnd={handleViewportMove}
+          onMoveStart={handleViewportMoveStart}
+          onNodesChange={handleNodesChange}
+          onPaneClick={closeNodeMenu}
+          fitView
         >
-          <div className="node-editor-context-menu-title">Add Node</div>
-          <button type="button" onClick={addDatabaseRootNode}>
-            Database Root
-          </button>
-        </div>
-      )}
+          <Background gap={20} size={1} />
+          <Controls position="bottom-left" />
+          <MiniMap pannable zoomable />
+        </ReactFlow>
+
+        {nodeMenu && (
+          <div
+            className="node-editor-context-menu"
+            onContextMenu={(event) => event.preventDefault()}
+            ref={menuRef}
+            style={{
+              left: nodeMenu.screenPosition.x,
+              top: nodeMenu.screenPosition.y,
+            }}
+          >
+            <div className="node-editor-context-menu-title">Add Node</div>
+            <button type="button" onClick={addDatabaseRootNode}>
+              Database Root
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

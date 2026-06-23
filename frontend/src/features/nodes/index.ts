@@ -4,6 +4,7 @@ File purpose: Centralizes exports for node-system components, factory helpers, t
 */
 
 import DatabaseRootNode from './DatabaseRootNode'
+import NodeEditorExportNode from './NodeEditorExportNode'
 import TemplateNode from './TemplateNode'
 
 export {
@@ -14,6 +15,17 @@ export {
   type DatabaseRootNodeModel,
   type DatabaseRootOutput,
 } from './DatabaseRootNode'
+
+export {
+  NODE_EDITOR_EXPORT_NODE_TYPE,
+  calculatePinnedExportNodePosition,
+  createNodeEditorExportInputHandleId,
+  createNodeEditorExportNode,
+  createNodeEditorExportNodeId,
+  type NodeEditorExportNodeData,
+  type NodeEditorExportNodeModel,
+  type NodeEditorExportOutlet,
+} from './NodeEditorExportNodeModel'
 
 export {
   TemplateNodeDefinition,
@@ -43,5 +55,6 @@ export {
 
 export const nodeTypes = {
   databaseRootNode: DatabaseRootNode,
+  nodeEditorExportNode: NodeEditorExportNode,
   templateNode: TemplateNode,
 }

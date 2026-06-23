@@ -28,6 +28,7 @@ const MIN_PREVIEW_WIDTH = 420
 const MIN_LIST_WIDTH = 320
 const MIN_SIDE_WIDTH = 280
 const MIN_PANEL_HEIGHT = 180
+const DEFAULT_NODE_HEIGHT_RATIO = 1 / 3
 
 type WorkspaceSizeVariable = '--list-width' | '--side-width' | '--node-height'
 
@@ -41,6 +42,10 @@ type GeometryPreviewState = {
 
 function clampPanelSize(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
+}
+
+function getDefaultNodeHeight() {
+  return Math.max(MIN_PANEL_HEIGHT, Math.round(window.innerHeight * DEFAULT_NODE_HEIGHT_RATIO))
 }
 
 // 中文：读取并处理几何文件，生成列表和 viewport 共用的 SVG path。
@@ -80,7 +85,7 @@ function App() {
   const [viewportText, setViewportText] = useState<string>()
   const [listWidth, setListWidth] = useState(360)
   const [sideWidth, setSideWidth] = useState(420)
-  const [nodeHeight, setNodeHeight] = useState(300)
+  const [nodeHeight, setNodeHeight] = useState(getDefaultNodeHeight)
   const [selectedAirfoilFileName, setSelectedAirfoilFileName] = useState<string | null>(null)
   const [geometryPreviewState, setGeometryPreviewState] = useState<GeometryPreviewState>({
     paths: {},
@@ -247,11 +252,11 @@ function App() {
 
   function beginNodeResize(event: ReactPointerEvent) {
     event.preventDefault()
-    const sideStack = event.currentTarget.parentElement
-    if (!sideStack) return
+    const workspace = event.currentTarget.parentElement
+    if (!workspace) return
 
-    const bounds = sideStack.getBoundingClientRect()
-    const maxNodeHeight = Math.max(MIN_PANEL_HEIGHT, bounds.height - MIN_PANEL_HEIGHT)
+    const bounds = workspace.getBoundingClientRect()
+    const maxNodeHeight = Math.max(MIN_PANEL_HEIGHT, bounds.height - MIN_PANEL_HEIGHT - 6)
     let nextNodeHeight = nodeHeight
 
     function handlePointerMove(moveEvent: PointerEvent) {
@@ -347,27 +352,25 @@ function App() {
           aria-label="Resize side panels"
         />
 
-        <aside className="side-stack">
-          <PropertiesPage />
+        <PropertiesPage />
 
-          <div
-            className="resize-handle resize-handle-horizontal"
-            onPointerDown={beginNodeResize}
-            role="separator"
-            aria-orientation="horizontal"
-            aria-label="Resize node editor"
-          />
+        <div
+          className="resize-handle resize-handle-horizontal workspace-node-resize-handle"
+          onPointerDown={beginNodeResize}
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="Resize node editor"
+        />
 
-          <section className="panel node-panel">
-            <div className="panel-header">
-              <span>Node Editor</span>
-              <div className="panel-actions">
-                <button type="button">Add</button>
-              </div>
+        <section className="panel node-panel">
+          <div className="panel-header">
+            <span>Node Editor</span>
+            <div className="panel-actions">
+              <button type="button">Add</button>
             </div>
-            <NodeEditorPage />
-          </section>
-        </aside>
+          </div>
+          <NodeEditorPage />
+        </section>
       </main>
     </div>
   )
