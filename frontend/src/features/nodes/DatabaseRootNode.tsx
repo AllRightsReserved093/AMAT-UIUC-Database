@@ -7,9 +7,10 @@ import { type NodeProps } from '@xyflow/react'
 import {
   FILENAMES_OUTPUT_KEY,
   databaseRootDefinition,
-  describeFilenameOutput,
   type DatabaseRootNodeModel,
 } from './DatabaseRootNodeModel'
+import TemplateNode from './TemplateNode'
+import { createTemplateNodeProps } from './TemplateNodeModel'
 
 // --------- Component Rendering ---------
 
@@ -21,14 +22,17 @@ function DatabaseRootNode(props: NodeProps<DatabaseRootNodeModel>) {
     FILENAMES_OUTPUT_KEY,
     props.id,
   )
+  const outputs = {
+    [FILENAMES_OUTPUT_KEY]: output,
+  }
 
-  return databaseRootDefinition.render(
-    props,
-    {
-      [FILENAMES_OUTPUT_KEY]: output,
-    },
-    describeFilenameOutput(output),
+  const templateData = databaseRootDefinition.createData(
+    props.id,
+    outputs,
+    databaseRootDefinition.describeOutputs(outputs),
   )
+
+  return <TemplateNode {...createTemplateNodeProps(props, templateData)} />
 }
 
 export default DatabaseRootNode

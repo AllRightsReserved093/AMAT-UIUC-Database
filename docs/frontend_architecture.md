@@ -128,7 +128,7 @@ Currently contains static form controls. The intended role is to display and edi
 
 `frontend/src/pages/NodeEditorPage.tsx`
 
-Owns the React Flow editor state, context menu, edge connections, and the first in-memory executor.
+Coordinates React Flow editor state, context menu, edge connections, pinned export-node synchronization, and execution triggers. Implementation details for the initial graph, graph executor, and pinned export-node layout live under `frontend/src/features/node-editor/`.
 
 ## Feature-Level Modules
 
@@ -215,28 +215,49 @@ This means a selection change should mainly affect the old selected card, the ne
 
 `frontend/src/features/nodes/TemplateNode.tsx`
 
-Defines the shared node visual model:
+Renders the shared node visual component.
+
+`frontend/src/features/nodes/TemplateNodeModel.ts`
+
+Defines the shared node model foundation:
 
 - node id helpers;
 - port id helpers;
 - template node data;
 - output status;
-- abstract node definition base class;
-- shared renderer.
+- node definition template;
+- declarative node-definition factory;
+- optional node execution and output-description hooks.
 
 `frontend/src/features/nodes/DatabaseRootNode.tsx`
 
-Defines the current database-root node:
+Renders the current database-root node. Its non-React definition lives in `frontend/src/features/nodes/DatabaseRootNodeModel.ts`:
 
 - node type;
 - filename-list output;
 - node factory;
-- backend execution function through `backendApi.getAirfoilFileNames()`;
+- definition-level backend execution through `backendApi.getAirfoilFileNames()`;
 - render-only React component.
+
+`frontend/src/features/nodes/NodeEditorExportNode.tsx`
+
+Renders pinned export outlet nodes. Its model, id helpers, factory, and pinned-position math live in `frontend/src/features/nodes/NodeEditorExportNodeModel.ts`.
 
 `frontend/src/features/nodes/index.ts`
 
-Exports node helpers and registers React Flow node types.
+Exports node helpers, registers React Flow node types, and exposes the node-definition registry used by the graph executor.
+
+`frontend/src/features/node-editor/nodeEditorInitialGraph.ts`
+
+Defines the node editor's current initial nodes, initial edges, and export outlet config.
+
+`frontend/src/features/node-editor/nodeGraphExecutor.ts`
+
+Provides the first in-memory frontend graph executor: structural-change detection, topological sorting, input assembly, execution, and output-status writes.
+
+`frontend/src/features/node-editor/pinnedExportNodeLayout.ts`
+
+Synchronizes pinned export-node positions and viewport zoom data against the current React Flow viewport.
 
 ## Current Frontend Data Strategy
 

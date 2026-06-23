@@ -35,14 +35,14 @@ import {
 import {
   initialNodeEditorEdges,
   initialNodeEditorNodes,
-} from '../features/nodes/nodeEditorInitialGraph'
+} from '../features/node-editor/nodeEditorInitialGraph'
 import {
   executeNodeGraph,
   getNextCreationOrder,
   hasExecutableEdgeChange,
   hasExecutableNodeChange,
-} from '../features/nodes/nodeGraphExecutor'
-import { updatePinnedExportNodePositions } from '../features/nodes/pinnedExportNodeLayout'
+} from '../features/node-editor/nodeGraphExecutor'
+import { updatePinnedExportNodePositions } from '../features/node-editor/pinnedExportNodeLayout'
 import '@xyflow/react/dist/style.css'
 
 // --------- Editor Types ---------

@@ -4,16 +4,14 @@ File purpose: Provides the node graph executor, including topological sorting, i
 */
 
 import { type Edge, type EdgeChange, type Node, type NodeChange } from '@xyflow/react'
-import {
-  DATABASE_ROOT_NODE_TYPE,
-  executeDatabaseRootNode,
-} from './DatabaseRootNodeModel'
+import { getNodeDefinition } from '../nodes'
 import {
   createNodeId,
+  type TemplateNodeDefinition,
   type TemplateNodeData,
   type TemplateNodeOutputData,
   type TemplateNodeOutputStatus,
-} from './TemplateNode'
+} from '../nodes/TemplateNodeModel'
 
 // --------- Executor Types ---------
 
@@ -180,7 +178,18 @@ function buildNodeInputs(
 
 // 根据执行状态生成通用节点描述。
 // Build a generic node description from execution status.
-function getExecutionDescription(status: TemplateNodeOutputStatus, error?: string): string {
+function getExecutionDescription(
+  status: TemplateNodeOutputStatus,
+  values: unknown[],
+  error?: string,
+  definition?: TemplateNodeDefinition<TemplateOutput>,
+): string {
+  if (definition) {
+    const outputValues = definition.createValueMapFromExecutionValues(values)
+    const outputs = definition.createOutputMapFromValues(outputValues, status, error)
+    return definition.describeOutputs(outputs)
+  }
+
   if (status === 'loading') return 'Executing node.'
   if (status === 'blocked') return 'Blocked by an upstream execution error.'
   if (status === 'error') return error ?? 'Node execution failed.'
@@ -196,6 +205,7 @@ function updateNodeOutputStatus(
   status: TemplateNodeOutputStatus,
   values: unknown[] = [],
   error?: string,
+  definition?: TemplateNodeDefinition<TemplateOutput>,
 ): Node[] {
   return nodes.map((node) => {
     if (node.id !== nodeId || !hasTemplateOutputs(node.data)) return node
@@ -220,7 +230,7 @@ function updateNodeOutputStatus(
       ...node,
       data: {
         ...node.data,
-        description: getExecutionDescription(status, error),
+        description: getExecutionDescription(status, values, error, definition),
         outputs,
       },
     }
@@ -235,11 +245,16 @@ function getErrorMessage(error: unknown): string {
 
 // --------- Executor ---------
 
-// 根据节点类型执行一个节点；第一版只写死支持 Database Root。
-// Execute one node by node type; the first version only hard-codes Database Root support.
-async function executeNodeByType(node: Node, inputs: unknown[]): Promise<unknown[]> {
-  if (node.type === DATABASE_ROOT_NODE_TYPE) {
-    return executeDatabaseRootNode(inputs)
+// 根据节点定义执行一个节点；没有 execute 的节点保留当前输出值。
+// Execute one node by definition; nodes without execute keep their current output values.
+async function executeNodeByType(
+  node: Node,
+  inputs: unknown[],
+  definition?: TemplateNodeDefinition<TemplateOutput>,
+): Promise<unknown[]> {
+  if (definition?.execute) {
+    const result = await definition.execute(inputs)
+    return definition.getExecutionValues(result)
   }
 
   return getCurrentOutputValues(node)
@@ -260,23 +275,45 @@ export async function executeNodeGraph(
   for (const node of orderedNodes) {
     if (!isExecutionCurrent()) return
 
+    const definition = getNodeDefinition(node.type)
     const { inputs, isBlocked } = buildNodeInputs(node, nodesById, edges, executionResults)
 
     if (isBlocked) {
       const values = getCurrentOutputValues(node)
       executionResults.set(node.id, { status: 'blocked', values })
-      setNodes((currentNodes) => updateNodeOutputStatus(currentNodes, node.id, 'blocked', values))
+      setNodes((currentNodes) => updateNodeOutputStatus(
+        currentNodes,
+        node.id,
+        'blocked',
+        values,
+        undefined,
+        definition,
+      ))
       continue
     }
 
-    setNodes((currentNodes) => updateNodeOutputStatus(currentNodes, node.id, 'loading'))
+    setNodes((currentNodes) => updateNodeOutputStatus(
+      currentNodes,
+      node.id,
+      'loading',
+      [],
+      undefined,
+      definition,
+    ))
 
     try {
-      const values = await executeNodeByType(node, inputs)
+      const values = await executeNodeByType(node, inputs, definition)
       if (!isExecutionCurrent()) return
 
       executionResults.set(node.id, { status: 'ready', values })
-      setNodes((currentNodes) => updateNodeOutputStatus(currentNodes, node.id, 'ready', values))
+      setNodes((currentNodes) => updateNodeOutputStatus(
+        currentNodes,
+        node.id,
+        'ready',
+        values,
+        undefined,
+        definition,
+      ))
     } catch (error) {
       if (!isExecutionCurrent()) return
 
@@ -285,7 +322,7 @@ export async function executeNodeGraph(
 
       executionResults.set(node.id, { status: 'error', values })
       setNodes((currentNodes) => (
-        updateNodeOutputStatus(currentNodes, node.id, 'error', values, errorMessage)
+        updateNodeOutputStatus(currentNodes, node.id, 'error', values, errorMessage, definition)
       ))
     }
   }

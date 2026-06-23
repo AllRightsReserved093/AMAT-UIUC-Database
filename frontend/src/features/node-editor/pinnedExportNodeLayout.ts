@@ -8,7 +8,7 @@ import {
   NODE_EDITOR_EXPORT_NODE_TYPE,
   calculatePinnedExportNodePosition,
   type NodeEditorExportNodeData,
-} from './NodeEditorExportNodeModel'
+} from '../nodes/NodeEditorExportNodeModel'
 
 // --------- Type Guards ---------
 

@@ -8,17 +8,17 @@ import {
   DATABASE_FILENAMES_OUTPUT_ID,
   DATABASE_ROOT_NODE_ID,
   createDatabaseRootNode,
-} from './DatabaseRootNodeModel'
+} from '../nodes/DatabaseRootNodeModel'
 import {
   createNodeEditorExportNode,
   type NodeEditorExportOutlet,
-} from './NodeEditorExportNodeModel'
+} from '../nodes/NodeEditorExportNodeModel'
 import {
   createInputPortId,
   createNodeId,
   createOutputPortId,
   createTemplateNode,
-} from './TemplateNode'
+} from '../nodes/TemplateNodeModel'
 
 // --------- Node Identity ---------
 

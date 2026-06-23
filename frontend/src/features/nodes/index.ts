@@ -4,13 +4,21 @@ File purpose: Centralizes exports for node-system components, factory helpers, t
 */
 
 import DatabaseRootNode from './DatabaseRootNode'
+import {
+  DATABASE_ROOT_NODE_TYPE,
+  databaseRootDefinition,
+} from './DatabaseRootNodeModel'
 import NodeEditorExportNode from './NodeEditorExportNode'
 import TemplateNode from './TemplateNode'
+import {
+  type TemplateNodeDefinition,
+  type TemplateNodeOutputData,
+} from './TemplateNodeModel'
 
 export {
   DATABASE_ROOT_NODE_TYPE,
   createDatabaseRootNode,
-  executeDatabaseRootNode,
+  databaseRootDefinition,
   DATABASE_FILENAMES_OUTPUT_ID,
   DATABASE_ROOT_NODE_ID,
   type DatabaseRootNodeModel,
@@ -29,7 +37,10 @@ export {
 } from './NodeEditorExportNodeModel'
 
 export {
+  TEMPLATE_NODE_TYPE,
   TemplateNodeDefinition,
+  defineTemplateNode,
+  createTemplateNodeDefinition,
   createTemplateNode,
   createTemplateNodeData,
   createTemplateNodeProps,
@@ -39,9 +50,9 @@ export {
   createOutputPortId,
   describeTemplateOutput,
   getTemplateOutputData,
-  useTemplateAsyncOutput,
   type TemplateNodeData,
   type TemplateNodeDataConfig,
+  type TemplateNodeDefinitionConfig,
   type TemplateNodeInputDefinition,
   type TemplateNodeModel,
   type TemplateNodeOutputData,
@@ -51,8 +62,18 @@ export {
   type TemplateNodePosition,
   type TemplateNodeRenderOutputMap,
   type TemplateNodeOutputStatus,
-  type TemplateAsyncOutputOptions,
-} from './TemplateNode'
+} from './TemplateNodeModel'
+
+export const nodeDefinitions: Record<string, TemplateNodeDefinition<TemplateNodeOutputData>> = {
+  [DATABASE_ROOT_NODE_TYPE]: databaseRootDefinition as TemplateNodeDefinition<TemplateNodeOutputData>,
+}
+
+export function getNodeDefinition(
+  nodeType: string | undefined,
+): TemplateNodeDefinition<TemplateNodeOutputData> | undefined {
+  if (!nodeType) return undefined
+  return nodeDefinitions[nodeType]
+}
 
 export const nodeTypes = {
   databaseRootNode: DatabaseRootNode,
