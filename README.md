@@ -79,6 +79,8 @@ AMATUIUCDatabase/
   dat_clean.py                 General raw-to-clean coordinate cleaning script
   paths.py                     Shared project path constants
   docker-compose.yml           Local PostgreSQL service
+  start.ps1                    One-click Windows PowerShell daily startup script
+  start.bat                    Double-click wrapper for start.ps1
   requirements.txt             Python dependency entry point
 ```
 
@@ -91,30 +93,62 @@ AMATUIUCDatabase/
 - [Database Structure](docs/database_structure.md)
 - [API Reference](docs/api_reference.md)
 
-## Backend Setup
+## Quick Start
 
-Run from the project root:
+After the first-time setup is complete, daily local startup can be done from the project root with:
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-docker compose up -d
-.\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+.\start.ps1
 ```
 
-Health check:
+You can also double-click:
 
 ```text
-http://127.0.0.1:8000/health
+start.bat
 ```
 
-## Frontend Setup
+The one-click script starts:
+
+- PostgreSQL through `docker compose up -d`;
+- FastAPI backend in a new PowerShell window;
+- Vite frontend in a new PowerShell window.
+
+Expected local URLs:
+
+```text
+Backend API: http://127.0.0.1:8000
+API docs:    http://127.0.0.1:8000/docs
+Frontend:    Vite prints the URL, usually http://localhost:5173
+```
+
+To verify startup without launching services:
+
+```powershell
+.\start.ps1 -DryRun
+```
+
+The script assumes `.venv` and `frontend/node_modules` already exist. For first-time setup, use [Startup Guide](docs/startup_guide.md).
+
+## Manual Startup
+
+If you do not want to use the one-click script, start the services manually from the project root:
+
+```powershell
+docker compose up -d
+.\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Then open another terminal:
 
 ```powershell
 cd frontend
-npm install
 npm run dev
+```
+
+Backend health check:
+
+```text
+http://127.0.0.1:8000/health
 ```
 
 The frontend API client defaults to:

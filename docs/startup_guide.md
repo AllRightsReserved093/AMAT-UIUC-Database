@@ -113,7 +113,49 @@ cd ..
 
 日常启动通常不需要重新建表、重新导入 metadata 或重新安装依赖。
 
-### 1. Start Database
+### Option A: One-Click Startup
+
+推荐日常使用根目录的一键启动脚本：
+
+```powershell
+.\start.ps1
+```
+
+也可以双击根目录的：
+
+```text
+start.bat
+```
+
+该脚本会自动执行：
+
+```text
+docker compose up -d
+backend FastAPI server in a new PowerShell window
+frontend Vite dev server in a new PowerShell window
+```
+
+启动后常用地址：
+
+```text
+Backend API: http://127.0.0.1:8000
+API docs:    http://127.0.0.1:8000/docs
+Frontend:    Vite printed URL, usually http://localhost:5173
+```
+
+如果只想检查脚本将要执行什么，不实际启动服务：
+
+```powershell
+.\start.ps1 -DryRun
+```
+
+一键启动脚本只负责日常启动，不负责首次建表、导入 metadata 或安装依赖。首次配置仍需先完成上面的 First-Time Setup。
+
+### Option B: Manual Startup
+
+如果需要手动控制每个服务，按下面步骤分别启动。
+
+#### 1. Start Database
 
 在项目根目录运行：
 
@@ -121,7 +163,7 @@ cd ..
 docker compose up -d
 ```
 
-### 2. Start Backend API
+#### 2. Start Backend API
 
 打开一个 PowerShell 终端，在项目根目录运行：
 
@@ -153,7 +195,7 @@ API 文档页面：
 http://127.0.0.1:8000/docs
 ```
 
-### 3. Start Frontend
+#### 3. Start Frontend
 
 再打开一个 PowerShell 终端：
 
