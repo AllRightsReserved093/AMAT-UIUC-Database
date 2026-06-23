@@ -1,6 +1,6 @@
 /*
-文件功能：定义节点编辑器数据导出口节点的类型、ID 规则、工厂函数和 pinned 坐标计算占位函数。
-File purpose: Defines the node-editor data export node types, ID rules, factory helper, and placeholder pinned-position calculator.
+文件功能：定义节点编辑器数据导出口节点的类型、ID 规则、工厂函数和 pinned 坐标计算函数。
+File purpose: Defines the node-editor data export node types, ID rules, factory helper, and pinned-position calculator.
 */
 
 import { type Node, type XYPosition } from '@xyflow/react'
@@ -26,6 +26,7 @@ export type NodeEditorExportOutlet = {
 // Export node data: extends the outlet config with the React Flow connection Handle id.
 export type NodeEditorExportNodeData = NodeEditorExportOutlet & {
   inputHandleId: string
+  viewportZoom: number
 }
 
 // 数据导出口的 React Flow 节点模型。
@@ -43,6 +44,8 @@ export type PinnedExportNodeEditorBounds = {
 export type PinnedExportNodePositionContext = {
   editorBounds: PinnedExportNodeEditorBounds
   screenToFlowPosition: (clientPosition: XYPosition) => XYPosition
+  viewportZoom?: number
+  nodeScale?: number
   nodeWidth?: number
   nodeHeight?: number
   rightPadding?: number
@@ -72,24 +75,37 @@ export function createNodeEditorExportInputHandleId(outletId: string): string {
   return `${createNodeEditorExportNodeId(outletId)}-input`
 }
 
-// --------- Position Placeholder ---------
+// --------- Position Calculation ---------
 
-// 根据 order、编辑器边界和 React Flow 坐标换算函数，计算 pinned 导出口节点的 flow 坐标。
-// Calculate pinned export-node flow coordinates from order, editor bounds, and React Flow's coordinate converter.
+// 计算导出口节点内部的反向缩放值，让它在 viewport zoom 变化时保持固定视觉尺寸。
+// Calculate the inverse inner scale that keeps export nodes visually fixed while the viewport zoom changes.
+export function calculatePinnedExportNodeVisualScale(viewportZoom: number | undefined): number {
+  if (!viewportZoom || viewportZoom <= 0) return 1
+  return 1 / viewportZoom
+}
+
+// 根据 order、编辑器边界、viewport zoom 和 React Flow 坐标换算函数，计算 pinned 导出口节点的 flow 坐标。
+// Calculate pinned export-node flow coordinates from order, editor bounds, viewport zoom, and React Flow's coordinate converter.
 export function calculatePinnedExportNodePosition(
   order: number,
   context: PinnedExportNodePositionContext,
 ): XYPosition {
+  const viewportZoom = context.viewportZoom && context.viewportZoom > 0
+    ? context.viewportZoom
+    : 1
+  const nodeScale = context.nodeScale ?? calculatePinnedExportNodeVisualScale(viewportZoom)
   const nodeWidth = context.nodeWidth ?? DEFAULT_EXPORT_NODE_WIDTH
   const nodeHeight = context.nodeHeight ?? DEFAULT_EXPORT_NODE_HEIGHT
   const rightPadding = context.rightPadding ?? DEFAULT_EXPORT_NODE_RIGHT_PADDING
   const topPadding = context.topPadding ?? DEFAULT_EXPORT_NODE_TOP_PADDING
   const verticalGap = context.verticalGap ?? DEFAULT_EXPORT_NODE_VERTICAL_GAP
   const normalizedOrder = Number.isFinite(order) ? Math.max(0, Math.floor(order)) : 0
+  const screenNodeWidth = nodeWidth * viewportZoom * nodeScale
+  const screenNodeHeight = nodeHeight * viewportZoom * nodeScale
 
   const screenPosition = {
-    x: context.editorBounds.right - rightPadding - nodeWidth,
-    y: context.editorBounds.top + topPadding + normalizedOrder * (nodeHeight + verticalGap),
+    x: context.editorBounds.right - rightPadding - screenNodeWidth,
+    y: context.editorBounds.top + topPadding + normalizedOrder * (screenNodeHeight + verticalGap),
   }
 
   return context.screenToFlowPosition(screenPosition)
@@ -110,6 +126,7 @@ export function createNodeEditorExportNode(
     data: {
       ...outlet,
       inputHandleId: createNodeEditorExportInputHandleId(outlet.id),
+      viewportZoom: 1,
     },
     draggable: false,
     selectable: false,

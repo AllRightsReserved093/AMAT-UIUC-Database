@@ -768,20 +768,29 @@ button:hover {
 }
 
 .node-editor-export-node {
+  --node-editor-export-node-layout-scale: 1;
+
   position: relative;
   display: flex;
   align-items: center;
-  min-width: 72px;
-  height: 32px;
-  padding: 0 12px 0 16px;
+  width: calc(72px * var(--node-editor-export-node-layout-scale));
+  height: calc(32px * var(--node-editor-export-node-layout-scale));
+  padding: 0
+    calc(12px * var(--node-editor-export-node-layout-scale))
+    0
+    calc(16px * var(--node-editor-export-node-layout-scale));
   overflow: hidden;
   color: var(--text-strong);
-  font-size: 11px;
+  font-size: calc(11px * var(--node-editor-export-node-layout-scale));
   line-height: 1;
   background: #202832;
-  border: 1px solid rgba(130, 192, 255, 0.32);
-  border-radius: 5px;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.26);
+  border: calc(1px * var(--node-editor-export-node-layout-scale)) solid rgba(130, 192, 255, 0.32);
+  border-radius: calc(5px * var(--node-editor-export-node-layout-scale));
+  box-shadow:
+    0
+    calc(8px * var(--node-editor-export-node-layout-scale))
+    calc(18px * var(--node-editor-export-node-layout-scale))
+    rgba(0, 0, 0, 0.26);
 }
 
 .node-editor-export-node-label {
@@ -792,12 +801,17 @@ button:hover {
 }
 
 .node-editor-export-node-handle {
-  left: -5px;
-  width: 10px;
-  height: 10px;
+  left: calc(-5px * var(--node-editor-export-node-layout-scale));
+  width: calc(10px * var(--node-editor-export-node-layout-scale));
+  height: calc(10px * var(--node-editor-export-node-layout-scale));
   background: #82c0ff;
-  border: 2px solid #101217;
-  box-shadow: 0 0 0 1px rgba(130, 192, 255, 0.42);
+  border: calc(2px * var(--node-editor-export-node-layout-scale)) solid #101217;
+  box-shadow:
+    0
+    0
+    0
+    calc(1px * var(--node-editor-export-node-layout-scale))
+    rgba(130, 192, 255, 0.42);
 }
 
 @media (max-width: 820px) {

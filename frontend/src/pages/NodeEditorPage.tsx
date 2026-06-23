@@ -129,6 +129,7 @@ function updatePinnedExportNodePositions(
   editorElement: HTMLElement,
 ): Node[] {
   const editorBounds = editorElement.getBoundingClientRect()
+  const viewportZoom = flowInstance.getZoom()
   let hasPositionChanges = false
 
   const nextNodes = nodes.map((node) => {
@@ -142,13 +143,19 @@ function updatePinnedExportNodePositions(
       screenToFlowPosition: (clientPosition) => (
         flowInstance.screenToFlowPosition(clientPosition)
       ),
+      viewportZoom,
     })
+    const hasZoomChange = node.data.viewportZoom !== viewportZoom
 
-    if (hasSamePosition(node.position, nextPosition)) return node
+    if (hasSamePosition(node.position, nextPosition) && !hasZoomChange) return node
 
     hasPositionChanges = true
     return {
       ...node,
+      data: {
+        ...node.data,
+        viewportZoom,
+      },
       position: nextPosition,
     }
   })
@@ -700,6 +707,7 @@ function NodeEditorPage() {
         <ReactFlow
           nodes={nodes}
           edges={edges}
+          deleteKeyCode={['Delete', 'Backspace']}
           nodeTypes={nodeTypes}
           onConnect={handleConnect}
           onConnectStart={closeNodeMenu}
