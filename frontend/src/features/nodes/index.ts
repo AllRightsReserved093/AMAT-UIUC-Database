@@ -8,13 +8,14 @@ import NodeEditorExportNode from './NodeEditorExportNode'
 import TemplateNode from './TemplateNode'
 
 export {
+  DATABASE_ROOT_NODE_TYPE,
   createDatabaseRootNode,
   executeDatabaseRootNode,
   DATABASE_FILENAMES_OUTPUT_ID,
   DATABASE_ROOT_NODE_ID,
   type DatabaseRootNodeModel,
   type DatabaseRootOutput,
-} from './DatabaseRootNode'
+} from './DatabaseRootNodeModel'
 
 export {
   NODE_EDITOR_EXPORT_NODE_TYPE,
