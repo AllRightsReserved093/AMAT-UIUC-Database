@@ -39,9 +39,16 @@ Defines the workspace layout, panel styling, airfoil list styling, viewport SVG 
 
 ## Backend Access
 
-`frontend/src/api/backend.ts` is the single frontend API boundary.
+Frontend backend access lives under `frontend/src/api/`.
 
-It provides:
+Current files:
+
+- `httpClient.ts`: backend URL, shared `request<T>()`, timeout handling, abort handling, and `ApiError`;
+- `airfoilApi.ts`: airfoil catalog, geometry, filter, and metadata APIs;
+- `nodeGraphApi.ts`: node-graph execution request/response types and frontend wrapper;
+- `backend.ts`: compatibility entry that re-exports the split modules and preserves `backendApi`.
+
+The compatibility `backendApi` provides:
 
 - `backendApi.health()`
 - `backendApi.getAirfoilFileNames()`
@@ -51,8 +58,9 @@ It provides:
 - `backendApi.filterAirfoilsByAero(reynoldsNumber, aeroFilter)`
 - `backendApi.getMetadata(fileNames)`
 - `backendApi.insertMetadata(metadata)`
+- `backendApi.executeNodeGraph(graph)`
 
-The wrapper centralizes:
+The shared HTTP client centralizes:
 
 - backend URL construction;
 - JSON serialization;
