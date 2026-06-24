@@ -33,20 +33,6 @@ function getPortLabel(port: TemplateNodePort): string {
   return port.label ?? port.id
 }
 
-// --------- Data Helpers ---------
-
-// 把输出端口数据转成可放进 data-output 属性的字符串。
-// Serialize output port data into a string suitable for the data-output attribute.
-function serializeOutputData(data: unknown): string {
-  if (data === undefined) return 'null'
-
-  try {
-    return JSON.stringify(data) ?? 'null'
-  } catch {
-    return '"[unserializable]"'
-  }
-}
-
 // --------- Render Helpers ---------
 
 // 渲染一列端口标签。
@@ -74,13 +60,12 @@ function renderInputHandles(inputs: TemplateNodePort[]) {
   ))
 }
 
-// 渲染右侧输出 Handle，并把每个输出端口的数据挂到 data-output 上。
-// Render right-side output Handles and attach each output port payload to data-output.
-function renderOutputHandles<TOutput>(outputs: TemplateNodeOutputPort<TOutput>[]) {
+// 渲染右侧输出 Handle。
+// Render right-side output Handles.
+function renderOutputHandles(outputs: TemplateNodeOutputPort[]) {
   return outputs.map((output, index) => (
     <Handle
       className="template-node-handle"
-      data-output={serializeOutputData(output.data)}
       id={output.id}
       key={output.id}
       position={Position.Right}
@@ -94,10 +79,10 @@ function renderOutputHandles<TOutput>(outputs: TemplateNodeOutputPort<TOutput>[]
 
 // 模板节点组件：只负责通用节点外观渲染。
 // Template node component: only renders shared node appearance.
-function TemplateNode<TOutput = unknown>({
+function TemplateNode({
   data,
   selected,
-}: NodeProps<TemplateNodeModel<TOutput>>) {
+}: NodeProps<TemplateNodeModel>) {
   const inputs = data.inputs ?? []
   const outputs = data.outputs ?? []
 

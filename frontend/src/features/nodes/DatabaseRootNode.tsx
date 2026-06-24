@@ -5,7 +5,6 @@ File purpose: Renders the database root node.
 
 import { type NodeProps } from '@xyflow/react'
 import {
-  FILENAMES_OUTPUT_KEY,
   databaseRootDefinition,
   type DatabaseRootNodeModel,
 } from './DatabaseRootNodeModel'
@@ -14,23 +13,10 @@ import { createTemplateNodeProps } from './TemplateNodeModel'
 
 // --------- Component Rendering ---------
 
-// 数据库根节点组件：只根据 node.data 渲染当前输出状态，不在组件内部执行后端请求。
-// Database root node component: renders current output state from node.data only, without running backend requests inside the component.
+// 数据库根节点组件：只渲染端口声明，不在前端执行数据查询。
+// Database root node component: renders port declarations only, without running data queries in the frontend.
 function DatabaseRootNode(props: NodeProps<DatabaseRootNodeModel>) {
-  const output = databaseRootDefinition.getInitialOutput(
-    props.data,
-    FILENAMES_OUTPUT_KEY,
-    props.id,
-  )
-  const outputs = {
-    [FILENAMES_OUTPUT_KEY]: output,
-  }
-
-  const templateData = databaseRootDefinition.createData(
-    props.id,
-    outputs,
-    databaseRootDefinition.describeOutputs(outputs),
-  )
+  const templateData = databaseRootDefinition.createData(props.id)
 
   return <TemplateNode {...createTemplateNodeProps(props, templateData)} />
 }

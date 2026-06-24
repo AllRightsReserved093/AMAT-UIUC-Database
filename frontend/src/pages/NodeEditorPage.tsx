@@ -1,6 +1,6 @@
 /*
-文件功能：提供节点编辑器页面，负责 React Flow 编排、右键菜单和结构变化后的执行触发。
-File purpose: Provides the node editor page, coordinating React Flow, the context menu, and execution triggers after graph changes.
+文件功能：提供节点编辑器页面，负责 React Flow 编排、右键菜单和节点图结构编辑。
+File purpose: Provides the node editor page, coordinating React Flow, the context menu, and node graph structure editing.
 */
 
 import {
@@ -19,9 +19,7 @@ import {
   useEdgesState,
   useNodesState,
   type Connection,
-  type Edge,
   type EdgeChange,
-  type Node,
   type NodeChange,
   type ReactFlowInstance,
   type XYPosition,
@@ -37,11 +35,10 @@ import {
   initialNodeEditorNodes,
 } from '../features/node-editor/nodeEditorInitialGraph'
 import {
-  executeNodeGraph,
   getNextCreationOrder,
-  hasExecutableEdgeChange,
-  hasExecutableNodeChange,
-} from '../features/node-editor/nodeGraphExecutor'
+  hasStructuralEdgeChange,
+  hasStructuralNodeChange,
+} from '../features/node-editor/nodeGraphStructure'
 import { updatePinnedOutletNodePositions } from '../features/node-editor/pinnedOutletNodeLayout'
 import '@xyflow/react/dist/style.css'
 
@@ -52,32 +49,22 @@ type NodeMenuState = {
   flowPosition: XYPosition
 }
 
-// 节点编辑器页面组件：负责编辑图结构、显示右键菜单，并在结构变化后触发执行器。
-// Node editor page component: edits graph structure, shows the context menu, and triggers the executor after structural changes.
+// 节点编辑器页面组件：负责编辑图结构和显示右键菜单。
+// Node editor page component: edits graph structure and shows the context menu.
 function NodeEditorPage() {
   const editorRef = useRef<HTMLDivElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
-  const executionIdRef = useRef(0)
   const pinnedNodeSyncFrameRef = useRef<number | null>(null)
-  const nodesRef = useRef<Node[]>(initialNodeEditorNodes)
-  const edgesRef = useRef<Edge[]>(initialNodeEditorEdges)
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodeEditorNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialNodeEditorEdges)
   const [flowInstance, setFlowInstance] = useState<ReactFlowInstance | null>(null)
   const [nodeMenu, setNodeMenu] = useState<NodeMenuState | null>(null)
-  const [executionVersion, setExecutionVersion] = useState(0)
 
   // 关闭右键菜单。
   // Close the context menu.
   const closeNodeMenu = useCallback(() => {
     setNodeMenu(null)
-  }, [])
-
-  // 标记图结构已经变化，让执行器在下一轮渲染后重新执行。
-  // Mark the graph structure as changed so the executor reruns after the next render.
-  const requestExecution = useCallback(() => {
-    setExecutionVersion((currentVersion) => currentVersion + 1)
   }, [])
 
   // 立即同步 pinned outlet node 坐标。
@@ -154,43 +141,39 @@ function NodeEditorPage() {
       const creationOrder = getNextCreationOrder(currentNodes, DATABASE_ROOT_NODE_TYPE)
       return [
         ...currentNodes,
-        createDatabaseRootNode(placementPosition, [], creationOrder),
+        createDatabaseRootNode(placementPosition, creationOrder),
       ]
     })
 
     closeNodeMenu()
-    requestExecution()
-  }, [closeNodeMenu, nodeMenu, requestExecution, setNodes])
+  }, [closeNodeMenu, nodeMenu, setNodes])
 
-  // 包装 React Flow 的节点变化处理，只在结构变化时触发执行器。
-  // Wrap React Flow node changes and trigger the executor only for structural changes.
+  // 包装 React Flow 的节点变化处理，结构变化时关闭菜单。
+  // Wrap React Flow node changes and close the menu on structural changes.
   const handleNodesChange = useCallback((changes: NodeChange[]) => {
     onNodesChange(changes)
 
-    if (hasExecutableNodeChange(changes)) {
+    if (hasStructuralNodeChange(changes)) {
       closeNodeMenu()
-      requestExecution()
     }
-  }, [closeNodeMenu, onNodesChange, requestExecution])
+  }, [closeNodeMenu, onNodesChange])
 
-  // 包装 React Flow 的边变化处理，只在依赖关系变化时触发执行器。
-  // Wrap React Flow edge changes and trigger the executor only when dependencies change.
+  // 包装 React Flow 的边变化处理，结构变化时关闭菜单。
+  // Wrap React Flow edge changes and close the menu on structural changes.
   const handleEdgesChange = useCallback((changes: EdgeChange[]) => {
     onEdgesChange(changes)
 
-    if (hasExecutableEdgeChange(changes)) {
+    if (hasStructuralEdgeChange(changes)) {
       closeNodeMenu()
-      requestExecution()
     }
-  }, [closeNodeMenu, onEdgesChange, requestExecution])
+  }, [closeNodeMenu, onEdgesChange])
 
-  // 连接两个节点后写入新边，并触发执行器。
-  // Write a new edge after connecting two nodes, then trigger the executor.
+  // 连接两个节点后写入新边。
+  // Write a new edge after connecting two nodes.
   const handleConnect = useCallback((connection: Connection) => {
     setEdges((currentEdges) => addEdge(connection, currentEdges))
     closeNodeMenu()
-    requestExecution()
-  }, [closeNodeMenu, requestExecution, setEdges])
+  }, [closeNodeMenu, setEdges])
 
   // 监听菜单外部点击和 Escape 键，按桌面应用菜单行为关闭菜单。
   // Listen for outside clicks and Escape to close the menu with desktop-app menu behavior.
@@ -244,27 +227,6 @@ function NodeEditorPage() {
     }
   ), [])
 
-  // 同步最新图结构到 ref，供异步执行器读取。
-  // Sync the latest graph structure into refs for the async executor.
-  useEffect(() => {
-    nodesRef.current = nodes
-    edgesRef.current = edges
-  }, [edges, nodes])
-
-  // 图结构变化后执行整张图；过期执行会被 executionIdRef 取消写回。
-  // Execute the graph after structural changes; stale executions are prevented from writing back by executionIdRef.
-  useEffect(() => {
-    const executionId = executionIdRef.current + 1
-    executionIdRef.current = executionId
-
-    executeNodeGraph(
-      nodesRef.current,
-      edgesRef.current,
-      setNodes,
-      () => executionIdRef.current === executionId,
-    )
-  }, [executionVersion, setNodes])
-
   return (
     <div className="node-editor">
       <div
@@ -291,7 +253,15 @@ function NodeEditorPage() {
         >
           <Background gap={20} size={1} />
           <Controls position="bottom-left" />
-          <MiniMap pannable zoomable />
+          <MiniMap
+            bgColor="#20242a"
+            maskColor="rgba(15, 17, 21, 0.62)"
+            nodeBorderRadius={3}
+            nodeColor="#3b4553"
+            nodeStrokeColor="#6b7a90"
+            pannable
+            zoomable
+          />
         </ReactFlow>
 
         {nodeMenu && (

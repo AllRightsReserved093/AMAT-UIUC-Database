@@ -4,11 +4,7 @@ File purpose: Defines the node editor's initial nodes, initial edges, and outlet
 */
 
 import { type Edge, type Node, type XYPosition } from '@xyflow/react'
-import {
-  DATABASE_FILENAMES_OUTPUT_ID,
-  DATABASE_ROOT_NODE_ID,
-  createDatabaseRootNode,
-} from '../nodes/DatabaseRootNodeModel'
+import { createDatabaseRootNode } from '../nodes/DatabaseRootNodeModel'
 import {
   createNodeEditorOutletNode,
   type NodeEditorOutlet,
@@ -22,8 +18,6 @@ import {
 
 // --------- Node Identity ---------
 
-const GEOMETRY_FILTER_NODE_ID = createNodeId('geometryFilter', 0)
-const PREVIEW_OUTPUT_NODE_ID = createNodeId('previewOutput', 0)
 const TEMPLATE_NODE_ID = createNodeId('templateNode', 0)
 const INITIAL_OUTLET_NODE_X = 820
 const INITIAL_OUTLET_NODE_Y = 70
@@ -66,16 +60,6 @@ function createInitialOutletNodes(outlets: NodeEditorOutlet[]): Node[] {
 
 export const initialNodeEditorNodes: Node[] = [
   createDatabaseRootNode({ x: 60, y: 70 }),
-  {
-    id: GEOMETRY_FILTER_NODE_ID,
-    position: { x: 300, y: 70 },
-    data: { label: 'Geometry Filter' },
-  },
-  {
-    id: PREVIEW_OUTPUT_NODE_ID,
-    position: { x: 540, y: 160 },
-    data: { label: 'Preview Output' },
-  },
   createTemplateNode({
     id: TEMPLATE_NODE_ID,
     position: { x: 300, y: 260 },
@@ -90,12 +74,12 @@ export const initialNodeEditorNodes: Node[] = [
         {
           id: createOutputPortId(TEMPLATE_NODE_ID, 0),
           label: 'Metadata',
-          data: { kind: 'metadata', schema: 'foil-metadata-v1' },
+          valueKind: 'foil-metadata',
         },
         {
           id: createOutputPortId(TEMPLATE_NODE_ID, 1),
           label: 'Preview',
-          data: { kind: 'viewport-preview', format: 'svg-path' },
+          valueKind: 'viewport-preview',
         },
       ],
     },
@@ -103,16 +87,4 @@ export const initialNodeEditorNodes: Node[] = [
   ...createInitialOutletNodes(nodeEditorOutlets),
 ]
 
-export const initialNodeEditorEdges: Edge[] = [
-  {
-    id: 'dataset-to-filter',
-    source: DATABASE_ROOT_NODE_ID,
-    sourceHandle: DATABASE_FILENAMES_OUTPUT_ID,
-    target: GEOMETRY_FILTER_NODE_ID,
-  },
-  {
-    id: 'filter-to-output',
-    source: GEOMETRY_FILTER_NODE_ID,
-    target: PREVIEW_OUTPUT_NODE_ID,
-  },
-]
+export const initialNodeEditorEdges: Edge[] = []

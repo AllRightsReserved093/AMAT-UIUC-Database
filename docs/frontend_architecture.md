@@ -128,7 +128,7 @@ Currently contains static form controls. The intended role is to display and edi
 
 `frontend/src/pages/NodeEditorPage.tsx`
 
-Coordinates React Flow editor state, context menu, edge connections, pinned outlet-node synchronization, and execution triggers. Implementation details for the initial graph, graph executor, and pinned outlet-node layout live under `frontend/src/features/node-editor/`.
+Coordinates React Flow editor state, context menu, edge connections, and pinned outlet-node synchronization. Implementation details for the initial graph, graph structure helpers, and pinned outlet-node layout live under `frontend/src/features/node-editor/`.
 
 ## Feature-Level Modules
 
@@ -224,19 +224,18 @@ Defines the shared node model foundation:
 - node id helpers;
 - port id helpers;
 - template node data;
-- output status;
+- input/output port declarations;
+- `valueKind` declarations for backend graph execution;
 - node definition template;
-- declarative node-definition factory;
-- optional node execution and output-description hooks.
+- declarative node-definition factory.
 
 `frontend/src/features/nodes/DatabaseRootNode.tsx`
 
 Renders the current database-root node. Its non-React definition lives in `frontend/src/features/nodes/DatabaseRootNodeModel.ts`:
 
 - node type;
-- filename-list output;
+- filename-list output port declaration;
 - node factory;
-- definition-level backend execution through `backendApi.getAirfoilFileNames()`;
 - render-only React component.
 
 `frontend/src/features/nodes/NodeEditorOutletNode.tsx`
@@ -245,15 +244,15 @@ Renders pinned outlet nodes. Its model, id helpers, factory, and pinned-position
 
 `frontend/src/features/nodes/index.ts`
 
-Exports node helpers, registers React Flow node types, and exposes the node-definition registry used by the graph executor.
+Exports node helpers and registers React Flow node types.
 
 `frontend/src/features/node-editor/nodeEditorInitialGraph.ts`
 
 Defines the node editor's current initial nodes, initial edges, and outlet config.
 
-`frontend/src/features/node-editor/nodeGraphExecutor.ts`
+`frontend/src/features/node-editor/nodeGraphStructure.ts`
 
-Provides the first in-memory frontend graph executor: structural-change detection, topological sorting, input assembly, execution, and output-status writes.
+Provides graph-structure helpers such as node creation order and structural-change detection. Actual node execution is intended to happen in the backend.
 
 `frontend/src/features/node-editor/pinnedOutletNodeLayout.ts`
 

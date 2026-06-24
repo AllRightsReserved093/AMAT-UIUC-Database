@@ -688,16 +688,37 @@ button:hover {
 .react-flow__minimap {
   background: #20242a;
   border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
 }
 
 .react-flow__controls {
-  box-shadow: none;
+  overflow: hidden;
+  background: #20242a;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
 }
 
 .react-flow__controls-button {
-  background: #2b3038;
-  border-color: var(--border);
-  fill: var(--text);
+  color: var(--text);
+  background: #252b33;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  fill: currentColor;
+}
+
+.react-flow__controls-button:hover {
+  color: var(--text-strong);
+  background: #303844;
+}
+
+.react-flow__controls-button svg {
+  fill: currentColor;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: 0;
 }
 
 .template-node {
