@@ -42,7 +42,7 @@ import {
   hasExecutableEdgeChange,
   hasExecutableNodeChange,
 } from '../features/node-editor/nodeGraphExecutor'
-import { updatePinnedExportNodePositions } from '../features/node-editor/pinnedExportNodeLayout'
+import { updatePinnedOutletNodePositions } from '../features/node-editor/pinnedOutletNodeLayout'
 import '@xyflow/react/dist/style.css'
 
 // --------- Editor Types ---------
@@ -80,47 +80,47 @@ function NodeEditorPage() {
     setExecutionVersion((currentVersion) => currentVersion + 1)
   }, [])
 
-  // 立即同步 pinned export node 坐标。
-  // Immediately sync pinned export node coordinates.
-  const syncPinnedExportNodes = useCallback((activeFlowInstance = flowInstance) => {
+  // 立即同步 pinned outlet node 坐标。
+  // Immediately sync pinned outlet node coordinates.
+  const syncPinnedOutletNodes = useCallback((activeFlowInstance = flowInstance) => {
     const editorElement = editorRef.current
     if (!activeFlowInstance || !editorElement) return
 
     setNodes((currentNodes) => (
-      updatePinnedExportNodePositions(currentNodes, activeFlowInstance, editorElement)
+      updatePinnedOutletNodePositions(currentNodes, activeFlowInstance, editorElement)
     ))
   }, [flowInstance, setNodes])
 
   // 把高频 viewport/resize 事件合并到下一帧执行。
   // Coalesce high-frequency viewport and resize events into the next animation frame.
-  const schedulePinnedExportNodeSync = useCallback((activeFlowInstance = flowInstance) => {
+  const schedulePinnedOutletNodeSync = useCallback((activeFlowInstance = flowInstance) => {
     if (!activeFlowInstance || pinnedNodeSyncFrameRef.current !== null) return
 
     pinnedNodeSyncFrameRef.current = window.requestAnimationFrame(() => {
       pinnedNodeSyncFrameRef.current = null
-      syncPinnedExportNodes(activeFlowInstance)
+      syncPinnedOutletNodes(activeFlowInstance)
     })
-  }, [flowInstance, syncPinnedExportNodes])
+  }, [flowInstance, syncPinnedOutletNodes])
 
-  // React Flow 初始化后保存实例，并立刻把导出口节点贴到当前可见区域右上侧。
-  // Store the React Flow instance after init and pin export nodes to the visible upper-right area immediately.
+  // React Flow 初始化后保存实例，并立刻把 outlet 节点贴到当前可见区域右上侧。
+  // Store the React Flow instance after init and pin outlet nodes to the visible upper-right area immediately.
   const handleFlowInit = useCallback((activeFlowInstance: ReactFlowInstance) => {
     setFlowInstance(activeFlowInstance)
-    syncPinnedExportNodes(activeFlowInstance)
-  }, [syncPinnedExportNodes])
+    syncPinnedOutletNodes(activeFlowInstance)
+  }, [syncPinnedOutletNodes])
 
-  // viewport 平移或缩放时立即重新计算导出口节点位置，减少 pinned node 的视觉滞后。
-  // Recalculate export-node positions immediately when the viewport pans or zooms to reduce visual lag.
+  // viewport 平移或缩放时立即重新计算 outlet 节点位置，减少 pinned node 的视觉滞后。
+  // Recalculate outlet-node positions immediately when the viewport pans or zooms to reduce visual lag.
   const handleViewportMove = useCallback(() => {
-    syncPinnedExportNodes()
-  }, [syncPinnedExportNodes])
+    syncPinnedOutletNodes()
+  }, [syncPinnedOutletNodes])
 
-  // viewport 开始移动时关闭菜单，并保持导出口节点贴边。
-  // Close the context menu when viewport movement starts, then keep export nodes pinned.
+  // viewport 开始移动时关闭菜单，并保持 outlet 节点贴边。
+  // Close the context menu when viewport movement starts, then keep outlet nodes pinned.
   const handleViewportMoveStart = useCallback(() => {
     closeNodeMenu()
-    syncPinnedExportNodes()
-  }, [closeNodeMenu, syncPinnedExportNodes])
+    syncPinnedOutletNodes()
+  }, [closeNodeMenu, syncPinnedOutletNodes])
 
   // 处理画布右键：阻止浏览器菜单，保存菜单显示坐标和节点放置坐标。
   // Handle canvas right-click: block the browser menu and store both menu and node placement positions.
@@ -215,23 +215,23 @@ function NodeEditorPage() {
     }
   }, [closeNodeMenu, nodeMenu])
 
-  // 节点编辑器尺寸变化时重新同步 pinned export node。
-  // Resync pinned export nodes when the node editor size changes.
+  // 节点编辑器尺寸变化时重新同步 pinned outlet node。
+  // Resync pinned outlet nodes when the node editor size changes.
   useEffect(() => {
     const editorElement = editorRef.current
     if (!flowInstance || !editorElement) return undefined
 
     const resizeObserver = new ResizeObserver(() => {
-      schedulePinnedExportNodeSync(flowInstance)
+      schedulePinnedOutletNodeSync(flowInstance)
     })
 
     resizeObserver.observe(editorElement)
-    schedulePinnedExportNodeSync(flowInstance)
+    schedulePinnedOutletNodeSync(flowInstance)
 
     return () => {
       resizeObserver.disconnect()
     }
-  }, [flowInstance, schedulePinnedExportNodeSync])
+  }, [flowInstance, schedulePinnedOutletNodeSync])
 
   // 组件卸载时清理尚未执行的 pinned node 同步帧。
   // Clear any pending pinned-node sync frame on component unmount.

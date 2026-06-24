@@ -1,24 +1,24 @@
 /*
-文件功能：同步 pinned export node 的位置和 viewport 缩放数据。
-File purpose: Synchronizes pinned export node positions and viewport zoom data.
+文件功能：同步 pinned outlet node 的位置和 viewport 缩放数据。
+File purpose: Synchronizes pinned outlet node positions and viewport zoom data.
 */
 
 import { type Node, type ReactFlowInstance, type XYPosition } from '@xyflow/react'
 import {
-  NODE_EDITOR_EXPORT_NODE_TYPE,
-  calculatePinnedExportNodePosition,
-  type NodeEditorExportNodeData,
-} from '../nodes/NodeEditorExportNodeModel'
+  NODE_EDITOR_OUTLET_NODE_TYPE,
+  calculatePinnedOutletNodePosition,
+  type NodeEditorOutletNodeData,
+} from '../nodes/NodeEditorOutletNodeModel'
 
 // --------- Type Guards ---------
 
-// 判断节点是否是 pinned export node，后续只对这类节点做位置同步。
-// Check whether a node is a pinned export node so only these nodes are repositioned.
-function isNodeEditorExportNode(
+// 判断节点是否是 pinned outlet node，后续只对这类节点做位置同步。
+// Check whether a node is a pinned outlet node so only these nodes are repositioned.
+function isNodeEditorOutletNode(
   node: Node,
-): node is Node<NodeEditorExportNodeData, typeof NODE_EDITOR_EXPORT_NODE_TYPE> {
-  return node.type === NODE_EDITOR_EXPORT_NODE_TYPE
-    && typeof (node.data as Partial<NodeEditorExportNodeData>).order === 'number'
+): node is Node<NodeEditorOutletNodeData, typeof NODE_EDITOR_OUTLET_NODE_TYPE> {
+  return node.type === NODE_EDITOR_OUTLET_NODE_TYPE
+    && typeof (node.data as Partial<NodeEditorOutletNodeData>).order === 'number'
 }
 
 // --------- Layout Helpers ---------
@@ -29,9 +29,9 @@ function hasSamePosition(firstPosition: XYPosition, secondPosition: XYPosition):
   return firstPosition.x === secondPosition.x && firstPosition.y === secondPosition.y
 }
 
-// 根据当前编辑器尺寸和 viewport，把所有 export node 贴回节点编辑器右上侧。
-// Pin all export nodes back to the upper-right side of the node editor from the current editor size and viewport.
-export function updatePinnedExportNodePositions(
+// 根据当前编辑器尺寸和 viewport，把所有 outlet node 贴回节点编辑器右上侧。
+// Pin all outlet nodes back to the upper-right side of the node editor from the current editor size and viewport.
+export function updatePinnedOutletNodePositions(
   nodes: Node[],
   flowInstance: ReactFlowInstance,
   editorElement: HTMLElement,
@@ -41,9 +41,9 @@ export function updatePinnedExportNodePositions(
   let hasPositionChanges = false
 
   const nextNodes = nodes.map((node) => {
-    if (!isNodeEditorExportNode(node)) return node
+    if (!isNodeEditorOutletNode(node)) return node
 
-    const nextPosition = calculatePinnedExportNodePosition(node.data.order, {
+    const nextPosition = calculatePinnedOutletNodePosition(node.data.order, {
       editorBounds: {
         top: editorBounds.top,
         right: editorBounds.right,

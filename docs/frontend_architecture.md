@@ -128,7 +128,7 @@ Currently contains static form controls. The intended role is to display and edi
 
 `frontend/src/pages/NodeEditorPage.tsx`
 
-Coordinates React Flow editor state, context menu, edge connections, pinned export-node synchronization, and execution triggers. Implementation details for the initial graph, graph executor, and pinned export-node layout live under `frontend/src/features/node-editor/`.
+Coordinates React Flow editor state, context menu, edge connections, pinned outlet-node synchronization, and execution triggers. Implementation details for the initial graph, graph executor, and pinned outlet-node layout live under `frontend/src/features/node-editor/`.
 
 ## Feature-Level Modules
 
@@ -239,9 +239,9 @@ Renders the current database-root node. Its non-React definition lives in `front
 - definition-level backend execution through `backendApi.getAirfoilFileNames()`;
 - render-only React component.
 
-`frontend/src/features/nodes/NodeEditorExportNode.tsx`
+`frontend/src/features/nodes/NodeEditorOutletNode.tsx`
 
-Renders pinned export outlet nodes. Its model, id helpers, factory, and pinned-position math live in `frontend/src/features/nodes/NodeEditorExportNodeModel.ts`.
+Renders pinned outlet nodes. Its model, id helpers, factory, and pinned-position math live in `frontend/src/features/nodes/NodeEditorOutletNodeModel.ts`.
 
 `frontend/src/features/nodes/index.ts`
 
@@ -249,15 +249,15 @@ Exports node helpers, registers React Flow node types, and exposes the node-defi
 
 `frontend/src/features/node-editor/nodeEditorInitialGraph.ts`
 
-Defines the node editor's current initial nodes, initial edges, and export outlet config.
+Defines the node editor's current initial nodes, initial edges, and outlet config.
 
 `frontend/src/features/node-editor/nodeGraphExecutor.ts`
 
 Provides the first in-memory frontend graph executor: structural-change detection, topological sorting, input assembly, execution, and output-status writes.
 
-`frontend/src/features/node-editor/pinnedExportNodeLayout.ts`
+`frontend/src/features/node-editor/pinnedOutletNodeLayout.ts`
 
-Synchronizes pinned export-node positions and viewport zoom data against the current React Flow viewport.
+Synchronizes pinned outlet-node positions and viewport zoom data against the current React Flow viewport.
 
 ## Current Frontend Data Strategy
 

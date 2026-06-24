@@ -8,7 +8,7 @@ import {
   DATABASE_ROOT_NODE_TYPE,
   databaseRootDefinition,
 } from './DatabaseRootNodeModel'
-import NodeEditorExportNode from './NodeEditorExportNode'
+import NodeEditorOutletNode from './NodeEditorOutletNode'
 import TemplateNode from './TemplateNode'
 import {
   type TemplateNodeDefinition,
@@ -26,15 +26,15 @@ export {
 } from './DatabaseRootNodeModel'
 
 export {
-  NODE_EDITOR_EXPORT_NODE_TYPE,
-  calculatePinnedExportNodePosition,
-  createNodeEditorExportInputHandleId,
-  createNodeEditorExportNode,
-  createNodeEditorExportNodeId,
-  type NodeEditorExportNodeData,
-  type NodeEditorExportNodeModel,
-  type NodeEditorExportOutlet,
-} from './NodeEditorExportNodeModel'
+  NODE_EDITOR_OUTLET_NODE_TYPE,
+  calculatePinnedOutletNodePosition,
+  createNodeEditorOutletInputHandleId,
+  createNodeEditorOutletNode,
+  createNodeEditorOutletNodeId,
+  type NodeEditorOutlet,
+  type NodeEditorOutletNodeData,
+  type NodeEditorOutletNodeModel,
+} from './NodeEditorOutletNodeModel'
 
 export {
   TEMPLATE_NODE_TYPE,
@@ -77,6 +77,6 @@ export function getNodeDefinition(
 
 export const nodeTypes = {
   databaseRootNode: DatabaseRootNode,
-  nodeEditorExportNode: NodeEditorExportNode,
+  nodeEditorOutletNode: NodeEditorOutletNode,
   templateNode: TemplateNode,
 }
