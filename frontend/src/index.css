@@ -71,10 +71,10 @@ button:hover {
 
 .app-titlebar {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) 138px;
+  grid-template-columns: auto auto minmax(0, 1fr);
   align-items: center;
   height: 34px;
-  padding: 0 0 0 10px;
+  padding: 0 10px;
   color: var(--text-muted);
   border-bottom: 1px solid #0f1115;
   user-select: none;
@@ -137,34 +137,6 @@ button:hover {
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.window-buttons {
-  display: grid;
-  grid-template-columns: repeat(3, 46px);
-  justify-self: end;
-  height: 100%;
-}
-
-.window-buttons button {
-  width: 46px;
-  height: 100%;
-  padding: 0;
-  color: var(--text-muted);
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  cursor: default;
-}
-
-.window-buttons button:hover {
-  color: var(--text-strong);
-  background: #343a44;
-}
-
-.window-buttons button:last-child:hover {
-  color: #fff;
-  background: #c42b1c;
 }
 
 .workspace {
@@ -837,7 +809,7 @@ button:hover {
 
 @media (max-width: 820px) {
   .app-titlebar {
-    grid-template-columns: minmax(0, 1fr) 138px;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .app-menu,

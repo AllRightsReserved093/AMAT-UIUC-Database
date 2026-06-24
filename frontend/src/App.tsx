@@ -314,11 +314,6 @@ function App() {
           <button type="button">View</button>
         </nav>
         <div className="app-mode">Airfoil Workspace</div>
-        <div className="window-buttons" aria-hidden="true">
-          <button type="button" tabIndex={-1}>_</button>
-          <button type="button" tabIndex={-1}>[]</button>
-          <button type="button" tabIndex={-1}>X</button>
-        </div>
       </header>
 
       <main className="workspace">
