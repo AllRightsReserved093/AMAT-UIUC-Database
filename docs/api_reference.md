@@ -21,6 +21,7 @@ Backend router:
 
 ```text
 backend/app/01_API/airfoil_api.py
+backend/app/01_API/node_api.py
 ```
 
 ## Health
@@ -309,6 +310,81 @@ Current backend status:
 
 - route exists;
 - `db_access.insert_metadata()` is still a placeholder.
+
+## Node Graph Execute
+
+Frontend method:
+
+```ts
+backendApi.executeNodeGraph(graph)
+```
+
+HTTP:
+
+```text
+POST /node-graph/execute
+```
+
+Request:
+
+```ts
+type NodeGraphExecutionRequest = {
+  graph: {
+    version: number
+    startNodeIds?: string[]
+    nodes: {
+      id: string
+      type: string
+      isStartNode?: boolean
+      params: Record<string, unknown>
+      inputs?: { id: string; label?: string; valueKind?: string }[]
+      outputs?: { id: string; label?: string; valueKind?: string }[]
+    }[]
+    edges: {
+      id: string
+      source: { nodeId: string; portId: string }
+      target: { nodeId: string; portId: string }
+    }[]
+    outlets: {
+      id: string
+      label?: string
+      valueKind?: string
+      order?: number
+      inputPortId?: string
+      sources: { nodeId: string; portId: string }[]
+    }[]
+  }
+}
+```
+
+Response:
+
+```ts
+type NodeGraphExecutionResponse = {
+  version: number
+  status: string
+  outlets: Record<string, {
+    status?: string
+    valueKind?: string
+    data?: unknown
+    message?: string
+  }>
+  diagnostics?: {
+    level: "info" | "warning" | "error"
+    message: string
+    nodeId?: string
+    portId?: string
+    outletId?: string
+  }[]
+}
+```
+
+Current backend status:
+
+- route exists;
+- validates node ids, edge ids, outlet ids, and port references;
+- compares frontend-provided `startNodeIds` with backend-inferred start nodes and returns a warning if they differ;
+- real node graph execution is not implemented yet, so valid requests return `status: "not_implemented"` with outlet placeholder results.
 
 ## Error Handling
 

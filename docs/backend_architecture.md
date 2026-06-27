@@ -11,6 +11,7 @@ The backend is a FastAPI service backed by PostgreSQL. It exposes airfoil catalo
 FastAPI
   backend/app/main.py
     includes router from backend/app/01_API/airfoil_api.py
+    includes router from backend/app/01_API/node_api.py
 
 PostgreSQL
   docker-compose.yml
@@ -36,6 +37,10 @@ Creates the FastAPI app, registers the airfoil router, and defines `/health`.
 `backend/app/01_API/airfoil_api.py`
 
 Defines HTTP routes and Pydantic request/response models. This layer translates request bodies and query parameters into service calls and converts service errors into HTTP errors.
+
+`backend/app/01_API/node_api.py`
+
+Defines the node-graph execution HTTP contract. The current implementation validates graph structure and returns placeholder outlet results until real node executors are connected.
 
 `backend/app/02_services/db_access.py`
 
@@ -88,6 +93,7 @@ PostgreSQL
       v
 FastAPI
   catalog, filter, metadata, geometry-file routes
+  node-graph execution route
       |
       v
 frontend/src/api/backend.ts
@@ -120,11 +126,13 @@ The frontend currently loads all available geometry text in one batch request, t
 - geometry-file text loading by file name;
 - geometry metadata filtering;
 - aerodynamic metadata filtering.
+- node-graph execution endpoint shape and graph validation.
 
 ## Known Gaps
 
 - `get_metadatas()` is still a placeholder in `db_access.py`;
 - `insert_metadata()` is still a placeholder in `db_access.py`;
+- node-graph execution currently returns `not_implemented` placeholder results;
 - geometry-file response is currently a `file_name -> raw_text` map, not parsed points;
 - geometry file path resolution should be hardened further before exposing untrusted path-like inputs;
 - `01_API` and `02_services` numeric package names work through `importlib`, but they are awkward import paths.

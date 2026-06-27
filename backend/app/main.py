@@ -25,6 +25,9 @@ app.add_middleware(
 airfoil_api = import_module("backend.app.01_API.airfoil_api")
 app.include_router(airfoil_api.router)
 
+node_api = import_module("backend.app.01_API.node_api")
+app.include_router(node_api.router)
+
 
 # 检查 API 服务是否存活。
 # Check whether the API service is alive.
