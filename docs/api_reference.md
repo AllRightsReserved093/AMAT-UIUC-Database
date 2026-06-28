@@ -325,6 +325,13 @@ HTTP:
 POST /node-graph/execute
 ```
 
+Backend entry:
+
+```text
+backend/app/01_API/node_api.py
+  -> backend/app/02_services/node_executor.py
+```
+
 Request:
 
 ```ts
@@ -357,34 +364,20 @@ type NodeGraphExecutionRequest = {
 }
 ```
 
-Response:
-
-```ts
-type NodeGraphExecutionResponse = {
-  version: number
-  status: string
-  outlets: Record<string, {
-    status?: string
-    valueKind?: string
-    data?: unknown
-    message?: string
-  }>
-  diagnostics?: {
-    level: "info" | "warning" | "error"
-    message: string
-    nodeId?: string
-    portId?: string
-    outletId?: string
-  }[]
-}
-```
-
 Current backend status:
 
 - route exists;
-- validates node ids, edge ids, outlet ids, and port references;
-- compares frontend-provided `startNodeIds` with backend-inferred start nodes and returns a warning if they differ;
-- real node graph execution is not implemented yet, so valid requests return `status: "not_implemented"` with outlet placeholder results.
+- request parsing uses Pydantic models in `backend/app/02_services/node_executor.py`;
+- Python-side model fields use `snake_case`, while Pydantic aliases accept the frontend `camelCase` JSON fields;
+- `node_api.py` passes `request.graph` to `node_executor.execute_node_graph(graph)`;
+- `node_executor.py` currently contains graph models, `build_node_index(graph)`, and a work-in-progress execution skeleton;
+- the response structure is intentionally not finalized yet;
+- the current placeholder route returns no stable response body and should not be treated as a frontend contract.
+
+Current frontend note:
+
+- `frontend/src/api/nodeGraphApi.ts` still contains provisional response types from the earlier placeholder response design;
+- these frontend response types should be updated once the backend response contract is finalized.
 
 ## Error Handling
 

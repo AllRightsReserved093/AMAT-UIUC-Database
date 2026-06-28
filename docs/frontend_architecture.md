@@ -45,7 +45,7 @@ Current files:
 
 - `httpClient.ts`: backend URL, shared `request<T>()`, timeout handling, abort handling, and `ApiError`;
 - `airfoilApi.ts`: airfoil catalog, geometry, filter, and metadata APIs;
-- `nodeGraphApi.ts`: node-graph execution request/response types and frontend wrapper;
+- `nodeGraphApi.ts`: node-graph execution request types, provisional response types, and frontend wrapper;
 - `backend.ts`: compatibility entry that re-exports the split modules and preserves `backendApi`.
 
 The compatibility `backendApi` provides:
@@ -262,6 +262,16 @@ Defines the node editor's current initial nodes, initial edges, and outlet confi
 
 Provides graph-structure helpers such as node creation order and structural-change detection. Actual node execution is intended to happen in the backend.
 
+`frontend/src/features/node-editor/nodeGraphPackage.ts`
+
+Packages the React Flow node graph into the backend request shape:
+
+```text
+version + startNodeIds + nodes + edges + outlets
+```
+
+Edges keep explicit `nodeId + portId` references so multi-port nodes can be executed by the backend without relying on node array order.
+
 `frontend/src/features/node-editor/pinnedOutletNodeLayout.ts`
 
 Synchronizes pinned outlet-node positions and viewport zoom data against the current React Flow viewport.
@@ -297,4 +307,5 @@ Preview:
 - `AirfoilLibraryPage` still keeps placeholder catalog records as initial loading-state data.
 - The resize handles still update CSS grid dimensions directly; large list DOM size can make resizing expensive.
 - `Geometry Filter` and `Preview Output` are still placeholder graph nodes;
-- node execution currently only has real behavior for the database-root node.
+- backend node execution is still a work-in-progress skeleton;
+- the node graph backend response shape is not finalized yet, so frontend response types in `nodeGraphApi.ts` are provisional.
